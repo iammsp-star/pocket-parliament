@@ -1,5 +1,7 @@
 # 🏛️ Pocket Parliament
 
+**[🌍 Play Pocket Parliament Live](https://iammsp-star.github.io/pocket-parliament/)**
+
 > **A high-stakes, macro-economic political simulation game built for the web.**
 
 ![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js)
