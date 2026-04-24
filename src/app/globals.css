@@ -1,0 +1,251 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #6366f1;
+  --secondary: #f59e0b;
+  --bg-deep: #020617;
+  --bg-surface: #0f172a;
+  --bg-elevated: #1e293b;
+  --bg-card: #1e293b;
+  --border: rgba(148, 163, 184, 0.1);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+
+  /* Game specific */
+  --pc-high: #22c55e;
+  --pc-mid: #f59e0b;
+  --pc-low: #ef4444;
+  --sector-primary: #f97316;
+  --sector-secondary: #6366f1;
+  --sector-tertiary: #06b6d4;
+  --sector-unemployed: #64748b;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--bg-deep);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* ─── Scrollbars ─────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.2); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.4); }
+
+/* ─── Glass morphism cards ────────────────────────────────────────── */
+.glass {
+  background: rgba(30, 41, 59, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(148, 163, 184, 0.08);
+}
+
+.glass-bright {
+  background: rgba(30, 41, 59, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+/* ─── Glow effects ────────────────────────────────────────────────── */
+.glow-indigo { box-shadow: 0 0 20px rgba(99, 102, 241, 0.3); }
+.glow-amber  { box-shadow: 0 0 20px rgba(245, 158, 11, 0.3); }
+.glow-red    { box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); }
+.glow-green  { box-shadow: 0 0 20px rgba(34, 197, 94, 0.3); }
+
+/* ─── Stat bar ────────────────────────────────────────────────────── */
+.stat-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.1);
+  overflow: hidden;
+  position: relative;
+}
+.stat-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ─── Chunky buttons ──────────────────────────────────────────────── */
+.btn-chunky {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-chunky::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.08);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.btn-chunky:hover::after { opacity: 1; }
+.btn-chunky:active { transform: scale(0.97); }
+
+.btn-primary {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: white;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4), 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.btn-amber {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #1a1a1a;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4), 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.btn-red {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4), 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.btn-ghost {
+  background: rgba(148, 163, 184, 0.08);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+.btn-ghost:hover { background: rgba(148, 163, 184, 0.15); color: white; }
+
+/* ─── Metric cards ────────────────────────────────────────────────── */
+.metric-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9));
+  border: 1px solid rgba(148, 163, 184, 0.08);
+  border-radius: 16px;
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.metric-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+}
+.metric-card:hover { border-color: rgba(148, 163, 184, 0.2); }
+
+/* ─── Alert severity colors ─────────────────────────────────────── */
+.severity-critical { color: #ef4444; }
+.severity-warning  { color: #f59e0b; }
+.severity-info     { color: #38bdf8; }
+
+.severity-bg-critical { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); }
+.severity-bg-warning  { background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); }
+.severity-bg-info     { background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); }
+
+/* ─── Political capital bar ──────────────────────────────────────── */
+.pc-bar-fill {
+  background: linear-gradient(90deg, #ef4444 0%, #f59e0b 40%, #22c55e 100%);
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ─── Sidebar tab ────────────────────────────────────────────────── */
+.sidebar-tab {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: 'Outfit', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.sidebar-tab.active {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: white;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+}
+.sidebar-tab:not(.active) {
+  background: rgba(148, 163, 184, 0.08);
+  color: #94a3b8;
+}
+.sidebar-tab:not(.active):hover { background: rgba(148, 163, 184, 0.15); color: white; }
+
+/* ─── Map placeholder grid ───────────────────────────────────────── */
+.map-grid {
+  background-image:
+    linear-gradient(rgba(99, 102, 241, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99, 102, 241, 0.06) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ─── Number ticker animation ────────────────────────────────────── */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.count-up { animation: countUp 0.4s ease; }
+
+/* ─── Pulse ring for crisis ──────────────────────────────────────── */
+@keyframes pulseRing {
+  0%   { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+.pulse-ring::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  animation: pulseRing 1.5s ease-out infinite;
+}
+
+/* ─── Low-poly isometric map container ───────────────────────────── */
+.isometric-canvas {
+  background: radial-gradient(ellipse at center, #0f172a 0%, #020617 70%);
+}
+
+/* ─── Faction bar ────────────────────────────────────────────────── */
+.faction-wealthy    { --faction-color: #fbbf24; }
+.faction-working    { --faction-color: #60a5fa; }
+.faction-nationalist{ --faction-color: #f87171; }
+.faction-youth      { --faction-color: #34d399; }
+
+/* ─── Toast / event log items ────────────────────────────────────── */
+.event-item {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+/* ─── Utility ────────────────────────────────────────────────────── */
+.text-display { font-family: 'Outfit', sans-serif; }
+.text-mono    { font-family: 'JetBrains Mono', monospace; }
+.no-select    { user-select: none; }
