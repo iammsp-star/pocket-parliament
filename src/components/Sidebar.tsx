@@ -140,7 +140,7 @@ export default function Sidebar() {
 
 // ─── Labor Tab ────────────────────────────────────────────────────────────────
 
-function LaborTab({ data }: { data: typeof [] }) {
+function LaborTab({ data }: { data: any[] }) {
   return (
     <div className="space-y-4">
       <SectionHeader title="Workforce Distribution" subtitle="Labor sector allocation" />
