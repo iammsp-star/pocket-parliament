@@ -20,7 +20,12 @@
     "recharts": "^2.12.7",
     "lucide-react": "^0.395.0",
     "clsx": "^2.1.1",
-    "tailwind-merge": "^2.3.0"
+    "tailwind-merge": "^2.3.0",
+    "@neondatabase/serverless": "^0.9.3",
+    "drizzle-orm": "^0.31.2",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/ios": "^6.0.0",
+    "@capacitor/android": "^6.0.0"
   },
   "devDependencies": {
     "typescript": "^5",
@@ -32,6 +37,9 @@
     "postcss": "^8",
     "autoprefixer": "^10.0.1",
     "eslint": "^8",
-    "eslint-config-next": "14.2.3"
+    "eslint-config-next": "14.2.3",
+    "drizzle-kit": "^0.22.7",
+    "@capacitor/cli": "^6.0.0",
+    "@tauri-apps/cli": "^2.0.0-beta"
   }
 }
