@@ -3,9 +3,11 @@
 import { useState, ReactNode } from "react";
 import { useGameStore } from "@/store/useGameStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, ThreeElements } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { Banknote, Users, Activity, ChevronRight, X } from "lucide-react";
+
+
 
 export default function Dashboard() {
   const { turn, budget, politicalCapital, stability, sectors, makeDecision, nextTurn } = useGameStore();
