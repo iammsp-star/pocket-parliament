@@ -48,7 +48,7 @@ function Building({ position, height, color, type }: {
       </mesh>
       {/* Roof detail */}
       <mesh position={[0, height + 0.1, 0]}>
-        <pyramidGeometry args={[0.3, 0.2, 4]} />
+        <coneGeometry args={[0.22, 0.25, 4]} />
         <meshLambertMaterial color={color} flatShading />
       </mesh>
     </group>
@@ -134,8 +134,8 @@ function SmokePuff({ position }: { position: [number, number, number] }) {
   useFrame((state) => {
     if (!ref.current) return
     const t = state.clock.elapsedTime + position[0]
-    ref.current.position.y = position[1] + (t % 2) * 0.8
-    ref.current.material.opacity = Math.max(0, 0.5 - ((t % 2) / 2) * 0.5)
+    ref.current.position.y = position[1] + (t % 2) * 0.8;
+    (ref.current.material as THREE.MeshLambertMaterial).opacity = Math.max(0, 0.5 - ((t % 2) / 2) * 0.5)
     ref.current.scale.setScalar(0.5 + ((t % 2) / 2) * 1.5)
   })
   return (
