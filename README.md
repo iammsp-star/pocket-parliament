@@ -4,7 +4,7 @@
 
 <div align="center">
 
-[![Play Now](https://img.shields.io/badge/▶%20Play%20Now-Live%20on%20Vercel-6366f1?style=for-the-badge&logo=vercel&logoColor=white)](https://pocket-parliament-7noiqq6f2-iammsp-stars-projects.vercel.app)
+[![Play Now](https://img.shields.io/badge/▶%20Play%20Now-Live%20on%20Vercel-6366f1?style=for-the-badge&logo=vercel&logoColor=white)](https://pocket-parliament-iammsp-stars-projects.vercel.app)
 
 </div>
 
