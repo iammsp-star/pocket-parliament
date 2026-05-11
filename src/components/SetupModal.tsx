@@ -17,7 +17,17 @@ export default function SetupModal() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    setupCountry(formData)
+
+    // Security enhancement: Sanitize inputs before submitting to store
+    // Trim whitespace to prevent empty or whitespace-only inputs
+    const sanitizedData = {
+      ...formData,
+      countryName: formData.countryName.trim() || 'Varantia',
+      leaderTitle: formData.leaderTitle.trim() || 'Prime Minister',
+      leaderName: formData.leaderName.trim() || 'Player'
+    }
+
+    setupCountry(sanitizedData)
   }
 
   return (
@@ -41,7 +51,7 @@ export default function SetupModal() {
             >
               <div className="bg-gradient-to-r from-indigo-950/80 to-slate-900 px-8 py-6 border-b border-white/10">
                 <h1 className="text-display font-black text-2xl text-white">Pocket Parliament</h1>
-                <p className="text-indigo-300 text-sm mt-1 font-medium">Initialize your nation's identity</p>
+                <p className="text-indigo-300 text-sm mt-1 font-medium">Initialize your nation&apos;s identity</p>
               </div>
 
               <form onSubmit={handleSubmit} className="p-8 space-y-6">
@@ -51,6 +61,7 @@ export default function SetupModal() {
                     <input
                       type="text"
                       required
+                      maxLength={50}
                       value={formData.countryName}
                       onChange={(e) => setFormData({ ...formData, countryName: e.target.value })}
                       className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 transition-colors"
@@ -64,6 +75,7 @@ export default function SetupModal() {
                       <input
                         type="text"
                         required
+                        maxLength={30}
                         value={formData.leaderTitle}
                         onChange={(e) => setFormData({ ...formData, leaderTitle: e.target.value })}
                         className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 transition-colors"
@@ -75,6 +87,7 @@ export default function SetupModal() {
                       <input
                         type="text"
                         required
+                        maxLength={30}
                         value={formData.leaderName}
                         onChange={(e) => setFormData({ ...formData, leaderName: e.target.value })}
                         className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 transition-colors"
