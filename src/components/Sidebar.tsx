@@ -33,6 +33,12 @@ const FACTION_CONFIG = {
   youth: { label: 'Youth & Students', emoji: '🎓', color: '#34d399' },
 }
 
+// Pre-compute Object.entries to avoid intermediate array allocations on every render
+const FACTION_ENTRIES = Object.entries(FACTION_CONFIG) as [
+  string,
+  { label: string; emoji: string; color: string }
+][]
+
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
@@ -420,7 +426,7 @@ function FactionsTab({ factions, history, intelActive, fundIntelligence, budget 
       )}
 
       <div className="space-y-3">
-        {(Object.entries(FACTION_CONFIG) as [string, any][]).map(([key, config]) => {
+        {FACTION_ENTRIES.map(([key, config]) => {
           const actualValue = factions[key]
           const displayValue = isFog ? '??' : actualValue
           const color = isFog ? '#64748b' : getApprovalColor(actualValue)
@@ -465,7 +471,7 @@ function FactionsTab({ factions, history, intelActive, fundIntelligence, budget 
                 <XAxis dataKey="turn" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} domain={[0, 100]} />
                 <Tooltip content={<CustomTooltip />} />
-                {Object.entries(FACTION_CONFIG).map(([key, config]) => (
+                {FACTION_ENTRIES.map(([key, config]) => (
                   <Line key={key} type="monotone" dataKey={key.charAt(0).toUpperCase() + key.slice(1)}
                     stroke={config.color} strokeWidth={1.5} dot={false} />
                 ))}

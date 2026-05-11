@@ -41,7 +41,7 @@ export default function SetupModal() {
             >
               <div className="bg-gradient-to-r from-indigo-950/80 to-slate-900 px-8 py-6 border-b border-white/10">
                 <h1 className="text-display font-black text-2xl text-white">Pocket Parliament</h1>
-                <p className="text-indigo-300 text-sm mt-1 font-medium">Initialize your nation's identity</p>
+                <p className="text-indigo-300 text-sm mt-1 font-medium">Initialize your nation&apos;s identity</p>
               </div>
 
               <form onSubmit={handleSubmit} className="p-8 space-y-6">
