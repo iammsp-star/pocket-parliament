@@ -149,7 +149,11 @@ function SmokePuff({ position }: { position: [number, number, number] }) {
 // ─── The Main Scene ────────────────────────────────────────────────────────────
 
 function IsometricScene() {
-  const { socialMetrics, economicMetrics, laborDemographics, budget } = useGameStore()
+  const socialMetrics = useGameStore((s) => s.socialMetrics)
+  const economicMetrics = useGameStore((s) => s.economicMetrics)
+  const laborDemographics = useGameStore((s) => s.laborDemographics)
+  const countryName = useGameStore((s) => s.countryName)
+
   const { crime, education, infrastructure, environmentQuality } = socialMetrics
   const { tourism, technologicalAdvancement } = economicMetrics
 
@@ -272,7 +276,7 @@ function IsometricScene() {
             anchorY="middle"
             font="/fonts/inter.woff"
           >
-            {useGameStore.getState().countryName}
+            {countryName}
           </Text>
         </Billboard>
       </Float>
@@ -304,8 +308,9 @@ function IsometricScene() {
 // ─── Canvas Wrapper ────────────────────────────────────────────────────────────
 
 export default function IsometricMap() {
-  const { socialMetrics, budget } = useGameStore()
-  const isCrisis = budget.debtToGDP > 90 || socialMetrics.crime > 75
+  const isCrisis = useGameStore((s) => s.budget.debtToGDP > 90 || s.socialMetrics.crime > 75)
+  const totalGDP = useGameStore((s) => s.budget.totalGDP)
+  const overallApproval = useGameStore((s) => s.overallApproval)
 
   return (
     <div className="relative w-full h-full isometric-canvas">
@@ -322,16 +327,16 @@ export default function IsometricMap() {
       </Canvas>
 
       {/* Overlay badges */}
-      <div className="absolute top-4 right-4 flex flex-col gap-2 pointer-events-none">
+      <div className="absolute top-4 right-4 flex flex-col gap-2 pointer-events-none" aria-label="Map Metrics Overlay">
         <MapBadge
           icon="🌏"
-          label={`GDP: ${formatCurrencyShort(useGameStore.getState().budget.totalGDP)}`}
+          label={`GDP: ${formatCurrencyShort(totalGDP)}`}
           color="indigo"
         />
         <MapBadge
           icon="🌡️"
-          label={`Approval: ${useGameStore.getState().overallApproval}%`}
-          color={useGameStore.getState().overallApproval > 50 ? 'green' : 'red'}
+          label={`Approval: ${overallApproval}%`}
+          color={overallApproval > 50 ? 'green' : 'red'}
         />
         {isCrisis && (
           <motion.div
@@ -344,7 +349,7 @@ export default function IsometricMap() {
       </div>
 
       {/* Corner hint */}
-      <div className="absolute bottom-4 left-4 pointer-events-none">
+      <div className="absolute bottom-4 left-4 pointer-events-none" aria-hidden="true">
         <p className="text-[10px] text-slate-500 glass rounded-lg px-2 py-1">
           🖱️ Drag to orbit · Scroll to zoom
         </p>
