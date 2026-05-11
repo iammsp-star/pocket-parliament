@@ -73,6 +73,7 @@ export default function TopNav() {
           onClick={toggleSidebar}
           className="btn-chunky btn-ghost p-2 rounded-xl"
           title="Toggle Sidebar"
+          aria-label="Toggle Sidebar"
         >
           <Menu size={18} />
         </motion.button>
@@ -237,6 +238,7 @@ export default function TopNav() {
             whileHover={{ scale: 1.05 }}
             onClick={openBrief}
             className="relative p-2.5 rounded-xl btn-chunky btn-ghost bg-slate-800/50"
+            aria-label="Pending alerts"
           >
             <Bell size={16} className={hasCritical ? 'text-red-400' : 'text-slate-400'} />
             {pendingCount > 0 && (

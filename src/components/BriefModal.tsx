@@ -223,6 +223,7 @@ export default function BriefModal() {
                   <button
                     onClick={handleClose}
                     className="p-2 rounded-xl btn-ghost flex-shrink-0"
+                    aria-label="Close brief"
                   >
                     <X size={16} />
                   </button>
