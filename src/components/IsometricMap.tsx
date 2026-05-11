@@ -207,10 +207,10 @@ function IsometricScene() {
   return (
     <>
       {/* Lighting */}
-      <ambientLight intensity={0.5} />
+      <ambientLight intensity={1} />
       <directionalLight
-        position={[10, 14, 8]}
-        intensity={1.2}
+        position={[10, 10, 10]}
+        intensity={2}
         castShadow
         shadow-mapSize={[1024, 1024]}
         color="#fef3c7"
@@ -319,34 +319,14 @@ export default function IsometricMap() {
         shadows
         camera={{ position: [12, 10, 12], fov: 45 }}
         gl={{ antialias: true, alpha: false }}
-        style={{ background: 'transparent' }}
       >
+        <color attach="background" args={['#0f172a']} />
         <Suspense fallback={null}>
           <IsometricScene />
         </Suspense>
       </Canvas>
 
-      {/* Overlay badges */}
-      <div className="absolute top-4 right-4 flex flex-col gap-2 pointer-events-none" aria-label="Map Metrics Overlay">
-        <MapBadge
-          icon="🌏"
-          label={`GDP: ${formatCurrencyShort(totalGDP)}`}
-          color="indigo"
-        />
-        <MapBadge
-          icon="🌡️"
-          label={`Approval: ${overallApproval}%`}
-          color={overallApproval > 50 ? 'green' : 'red'}
-        />
-        {isCrisis && (
-          <motion.div
-            animate={{ scale: [1, 1.05, 1], opacity: [1, 0.7, 1] }}
-            transition={{ repeat: Infinity, duration: 1 }}
-          >
-            <MapBadge icon="🚨" label="CRISIS ACTIVE" color="red" />
-          </motion.div>
-        )}
-      </div>
+
 
       {/* Corner hint */}
       <div className="absolute bottom-4 left-4 pointer-events-none" aria-hidden="true">
@@ -358,22 +338,3 @@ export default function IsometricMap() {
   )
 }
 
-function MapBadge({ icon, label, color }: { icon: string; label: string; color: string }) {
-  const colors: Record<string, string> = {
-    indigo: 'bg-indigo-500/20 border-indigo-500/30 text-indigo-300',
-    green: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300',
-    red: 'bg-red-500/20 border-red-500/30 text-red-300',
-  }
-  return (
-    <div className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border backdrop-blur-sm ${colors[color] || colors.indigo}`}>
-      <span>{icon}</span>
-      <span>{label}</span>
-    </div>
-  )
-}
-
-function formatCurrencyShort(v: number) {
-  if (v >= 1000000) return `$${(v / 1000000).toFixed(1)}T`
-  if (v >= 1000) return `$${(v / 1000).toFixed(0)}B`
-  return `$${v}M`
-}

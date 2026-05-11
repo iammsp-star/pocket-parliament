@@ -70,6 +70,8 @@ export default function Sidebar() {
     setMinistryBudget,
     setDefcon,
     passLaw,
+    intelActive,
+    fundIntelligence,
   } = useGameStore()
 
   const laborData = [
@@ -140,9 +142,9 @@ export default function Sidebar() {
                 {activeTab === 'labor' && <LaborTab data={laborData} />}
                 {activeTab === 'economy' && <EconomyTab gdpData={gdpChartData} budget={budget} economic={economicMetrics} />}
                 {activeTab === 'social' && <SocialTab social={socialMetrics} />}
-                {activeTab === 'diplomacy' && <FactionsTab factions={factionApproval} history={approvalChartData} />}
+                {activeTab === 'diplomacy' && <FactionsTab factions={factionApproval} history={approvalChartData} intelActive={intelActive} fundIntelligence={fundIntelligence} budget={budget} />}
                 {activeTab === 'cabinet' && <CabinetTab ministries={ministries} appointMinister={appointMinister} setMinistryBudget={setMinistryBudget} pc={politicalCapital} />}
-                {activeTab === 'geopolitics' && <GeopoliticsTab geopolitics={geopolitics} setDefcon={setDefcon} />}
+                {activeTab === 'geopolitics' && <GeopoliticsTab geopolitics={geopolitics} setDefcon={setDefcon} intelActive={intelActive} />}
                 {activeTab === 'laws' && <LawsTab activeLaws={activeLaws} passLaw={passLaw} pc={politicalCapital} approval={overallApproval} />}
               </motion.div>
             </AnimatePresence>
@@ -396,15 +398,32 @@ function SocialTab({ social }: { social: any }) {
 
 // ─── Factions Tab ─────────────────────────────────────────────────────────────
 
-function FactionsTab({ factions, history }: { factions: any; history: any[] }) {
+function FactionsTab({ factions, history, intelActive, fundIntelligence, budget }: any) {
+  const isFog = intelActive === 0
+
   return (
     <div className="space-y-4">
       <SectionHeader title="Faction Approval" subtitle="Political coalition dynamics" />
 
+      {isFog && (
+        <div className="bg-amber-950/40 border border-amber-500/30 rounded-xl p-3 mb-2 flex flex-col gap-2">
+          <p className="text-xs text-amber-300 font-bold">Data Obscured (Fog of War)</p>
+          <p className="text-[10px] text-amber-200/70">Faction approval numbers are estimates. Fund polling for accurate data.</p>
+          <button 
+            onClick={fundIntelligence} 
+            disabled={budget.revenue < 10000}
+            className="w-full py-1.5 bg-amber-900/50 hover:bg-amber-800/80 text-amber-300 text-[10px] font-bold rounded border border-amber-500/30 transition-colors disabled:opacity-50"
+          >
+            Fund Polling Operation ($10B)
+          </button>
+        </div>
+      )}
+
       <div className="space-y-3">
         {(Object.entries(FACTION_CONFIG) as [string, any][]).map(([key, config]) => {
-          const value = factions[key]
-          const color = getApprovalColor(value)
+          const actualValue = factions[key]
+          const displayValue = isFog ? '??' : actualValue
+          const color = isFog ? '#64748b' : getApprovalColor(actualValue)
           return (
             <div key={key} className="metric-card">
               <div className="flex justify-between items-center mb-2">
@@ -412,16 +431,24 @@ function FactionsTab({ factions, history }: { factions: any; history: any[] }) {
                   <span className="text-lg">{config.emoji}</span>
                   <span className="text-xs font-semibold text-slate-300">{config.label}</span>
                 </div>
-                <span className="text-display font-black text-sm" style={{ color }}>{value}%</span>
+                <span className="text-display font-black text-sm" style={{ color }}>{displayValue}%</span>
               </div>
-              <div className="stat-bar">
-                <motion.div
-                  className="stat-bar-fill"
-                  style={{ backgroundColor: color, width: `${value}%` }}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${value}%` }}
-                  transition={{ duration: 0.8 }}
-                />
+              <div className="stat-bar bg-slate-800">
+                {!isFog && (
+                  <motion.div
+                    className="stat-bar-fill"
+                    style={{ backgroundColor: color, width: `${actualValue}%` }}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${actualValue}%` }}
+                    transition={{ duration: 0.8 }}
+                  />
+                )}
+                {isFog && (
+                  <motion.div
+                    className="stat-bar-fill animate-pulse"
+                    style={{ backgroundColor: '#475569', width: `50%` }}
+                  />
+                )}
               </div>
             </div>
           )
@@ -429,7 +456,7 @@ function FactionsTab({ factions, history }: { factions: any; history: any[] }) {
       </div>
 
       {/* Approval History chart */}
-      {history.length > 1 && (
+      {!isFog && history.length > 1 && (
         <div>
           <p className="text-xs text-slate-400 mb-2">Approval Trends</p>
           <div className="h-36">
@@ -505,25 +532,36 @@ function CabinetTab({ ministries, appointMinister, setMinistryBudget, pc }: any)
 
 // ─── Geopolitics Tab ─────────────────────────────────────────────────────────
 
-function GeopoliticsTab({ geopolitics, setDefcon }: any) {
+function GeopoliticsTab({ geopolitics, setDefcon, intelActive }: any) {
+  const isFog = intelActive === 0
+
   return (
     <div className="space-y-4">
       <SectionHeader title="Geopolitics" subtitle="Border tension & Defense Readiness" />
 
       <div className="metric-card text-center">
         <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-2">Border Tension</p>
-        <p className={`text-display font-black text-4xl ${geopolitics.borderTension > 80 ? 'text-red-500' : geopolitics.borderTension > 50 ? 'text-amber-500' : 'text-emerald-500'}`}>
-          {geopolitics.borderTension.toFixed(0)}%
+        <p className={`text-display font-black text-4xl ${isFog ? 'text-slate-500' : geopolitics.borderTension > 80 ? 'text-red-500' : geopolitics.borderTension > 50 ? 'text-amber-500' : 'text-emerald-500'}`}>
+          {isFog ? '??' : geopolitics.borderTension.toFixed(0)}%
         </p>
         <div className="mt-4 stat-bar bg-slate-800">
-          <motion.div
-            className="stat-bar-fill"
-            style={{ backgroundColor: geopolitics.borderTension > 80 ? '#ef4444' : geopolitics.borderTension > 50 ? '#f59e0b' : '#22c55e', width: `${geopolitics.borderTension}%` }}
-            initial={{ width: 0 }}
-            animate={{ width: `${geopolitics.borderTension}%` }}
-          />
+          {!isFog && (
+            <motion.div
+              className="stat-bar-fill"
+              style={{ backgroundColor: geopolitics.borderTension > 80 ? '#ef4444' : geopolitics.borderTension > 50 ? '#f59e0b' : '#22c55e', width: `${geopolitics.borderTension}%` }}
+              initial={{ width: 0 }}
+              animate={{ width: `${geopolitics.borderTension}%` }}
+            />
+          )}
+          {isFog && (
+            <div className="stat-bar-fill animate-pulse bg-slate-600" style={{ width: '50%' }} />
+          )}
         </div>
-        <p className="text-[10px] text-slate-500 mt-2">If tension reaches 100%, a Border Conflict will occur.</p>
+        {isFog ? (
+          <p className="text-[10px] text-amber-400 mt-2 font-bold">Fund Intelligence (Factions Tab) to reveal exact border tension.</p>
+        ) : (
+          <p className="text-[10px] text-slate-500 mt-2">If tension reaches 100%, a Border Conflict will occur.</p>
+        )}
       </div>
 
       <div className="space-y-2">

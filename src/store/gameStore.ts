@@ -121,7 +121,7 @@ export interface GameState {
 
   // ─── Turn & Phase ────────────────────────────────────────────────────
   turn: number
-  gamePhase: 'setup' | 'playing' | 'crisis' | 'game-over' | 'victory'
+  gamePhase: 'setup' | 'playing' | 'crisis' | 'game-over' | 'victory' | 'game_over_lost' | 'game_over_won' | 'impeached'
   year: number
 
   // ─── Political Capital ───────────────────────────────────────────────
@@ -139,6 +139,8 @@ export interface GameState {
   // ─── Factions ────────────────────────────────────────────────────────
   factionApproval: FactionApproval
   overallApproval: number   // computed from factions
+  activeDebuffs: string[]
+  consecutiveLowApproval: number
 
   // ─── Modern Age Systems ──────────────────────────────────────────────
   ministries: {
@@ -149,6 +151,8 @@ export interface GameState {
   }
   geopolitics: Geopolitics
   activeLaws: string[]
+  intelActive: number // turns remaining for intel
+  turnsUntilElection: number
 
   // ─── Events & Briefs ─────────────────────────────────────────────────
   currentBrief: GameBrief | null
@@ -192,6 +196,7 @@ export interface GameState {
   appointMinister: (ministry: keyof GameState['ministries']) => void
   setMinistryBudget: (ministry: keyof GameState['ministries'], budget: number) => void
   passLaw: (lawId: string) => void
+  fundIntelligence: () => void
 }
 
 // ─── Starting State (Underdog Nation) ────────────────────────────────────────
@@ -308,6 +313,12 @@ export const useGameStore = create<GameState>()(
     turn: 1,
     gamePhase: 'playing',
     year: 2024,
+
+    // Tension & Fog of War
+    turnsUntilElection: 20,
+    consecutiveLowApproval: 0,
+    intelActive: 0,
+    activeDebuffs: [],
 
     // Political Capital
     politicalCapital: 42,
@@ -436,6 +447,16 @@ export const useGameStore = create<GameState>()(
 
     closeBrief: () => set({ isBriefModalOpen: false }),
 
+    fundIntelligence: () => {
+      const state = get()
+      if (state.budget.revenue < 10000) return // Ensure enough money
+      set({ 
+        budget: { ...state.budget, revenue: state.budget.revenue - 10000 },
+        intelActive: 4 
+      })
+      get().addEvent('Intelligence operation funded. Rival and faction data revealed for 1 year.', 'info')
+    },
+
     applyChoice: (choice) => {
       const state = get()
       const { effects } = choice
@@ -488,50 +509,101 @@ export const useGameStore = create<GameState>()(
 
     advanceTurn: () => {
       const state = get()
+      if (state.gamePhase === 'game_over_lost' || state.gamePhase === 'game_over_won' || state.gamePhase === 'impeached') return
+
       const newTurn = state.turn + 1
       const newYear = newTurn % 4 === 0 ? state.year + 1 : state.year
 
-      // Apply Laws Multipliers
-      // Note: In a real implementation we would import LAWS, but for the tick we can fetch them locally or via the UI.
-      // To keep things simple and decoupled, we assume laws primarily apply passive effects here.
+      // ─── Intel & Election Timers ─────────────────────────────────────────
+      const newIntelActive = Math.max(0, state.intelActive - 1)
+      let newTurnsUntilElection = state.turnsUntilElection - 1
+      let newConsecutiveLowApproval = state.overallApproval < 15 ? state.consecutiveLowApproval + 1 : 0
+      let newGamePhase: GameState['gamePhase'] = state.gamePhase
+      let bonusPC = 0
+      const eventsToLog: GameEvent[] = []
+
+      // Impeachment check
+      if (newConsecutiveLowApproval >= 3) {
+        newGamePhase = 'impeached'
+      }
+
+      // Election check
+      if (newTurnsUntilElection <= 0 && newGamePhase !== 'impeached') {
+        if (state.overallApproval >= 50) {
+          // Win election
+          newTurnsUntilElection = 20
+          bonusPC = 50
+          eventsToLog.push({ id: `e-${Date.now()}-win`, message: 'You won re-election! +50 Political Capital.', severity: 'info', turn: newTurn, timestamp: Date.now() })
+        } else {
+          // Lose election
+          newGamePhase = 'game_over_lost'
+        }
+      }
+
+      // ─── Faction Retaliation & Debuffs ──────────────────────────────────
+      const newActiveDebuffs: string[] = []
+      let revenueMult = 1.0
+      let borderTensionPenalty = 0
+      let techPenalty = 0
+      let deficitPenalty = 0
+
+      if (state.factionApproval.working < 25) {
+        newActiveDebuffs.push('National Strike')
+        revenueMult = 0.2 // 80% drop in revenue
+      }
+      if (state.factionApproval.wealthy < 25) { // Corporates equivalent
+        newActiveDebuffs.push('Capital Flight')
+        deficitPenalty = 50000 // Massive deficit penalty
+      }
+      if (state.factionApproval.nationalist < 25) {
+        newActiveDebuffs.push('Border Vulnerability')
+        borderTensionPenalty = 15
+      }
+      if (state.factionApproval.youth < 25) {
+        newActiveDebuffs.push('Brain Drain')
+        techPenalty = 2
+      }
+
+      // ─── Apply Laws Multipliers ─────────────────────────────────────────
       let popGrowthMult = 1.0
       let secondaryGrowthMult = 1.0
       
       if (state.activeLaws.includes('law-free-healthcare')) popGrowthMult = 1.5
       if (state.activeLaws.includes('law-corp-deregulation')) secondaryGrowthMult = 2.0
 
-      // Natural economic tick
+      // ─── Economic Tick ──────────────────────────────────────────────────
       const gdpGrowth = (state.economicMetrics.gdpGrowthRate / 100) * secondaryGrowthMult
       const newGDP = Math.round(state.budget.totalGDP * (1 + gdpGrowth))
       
-      // Defcon costs
       const defconCostMult = { 5: 1, 4: 1.2, 3: 1.5, 2: 2.0, 1: 3.0 }[state.geopolitics.defconLevel] || 1
       const militarySpending = (state.budget.expenditure * (state.ministries.defense.allocatedBudget / 100)) * defconCostMult
       const totalExpenditure = state.budget.expenditure + (militarySpending - (state.budget.expenditure * (state.ministries.defense.allocatedBudget / 100)))
 
-      const newDeficit = state.budget.revenue - totalExpenditure
+      const newRevenue = state.budget.revenue * revenueMult
+      const newDeficit = newRevenue - totalExpenditure - deficitPenalty
       const newDebtToGDP = Math.max(0, state.budget.debtToGDP + (newDeficit < 0 ? 2 : -1))
 
-      // Natural political capital recovery
+      // ─── Political Capital ──────────────────────────────────────────────
       const pcRecovery = state.overallApproval > 50 ? 3 : state.overallApproval > 30 ? 1 : -2
-      const newPC = Math.max(0, Math.min(state.maxPoliticalCapital, state.politicalCapital + pcRecovery))
+      const newPC = Math.max(0, Math.min(state.maxPoliticalCapital, state.politicalCapital + pcRecovery + bonusPC))
 
-      // Ministry effects on Social Metrics
-      // If budget < 15, things decay.
+      // ─── Ministry effects on Social Metrics ─────────────────────────────
       const getChange = (min: Ministry) => (min.allocatedBudget - 15) * 0.1 * min.ministerEfficiency
       const newSocial = { ...state.socialMetrics }
       newSocial.healthcare = Math.max(0, Math.min(100, newSocial.healthcare + getChange(state.ministries.health) * popGrowthMult))
       newSocial.education = Math.max(0, Math.min(100, newSocial.education + getChange(state.ministries.education)))
       
-      // Geopolitics: Foreign Affairs lowers tension. High DEFCON (lower number) lowers tension.
+      const newEconomic = { ...state.economicMetrics }
+      newEconomic.technologicalAdvancement = Math.max(0, newEconomic.technologicalAdvancement - techPenalty)
+
+      // ─── Geopolitics ────────────────────────────────────────────────────
       const faEffect = state.ministries.foreignAffairs.allocatedBudget * 0.05 * state.ministries.foreignAffairs.ministerEfficiency
-      const defconEffect = state.geopolitics.defconLevel < 5 ? (5 - state.geopolitics.defconLevel) * 2 : -1 // peace increases tension slowly, defcon lowers it
-      let newBorderTension = Math.max(0, state.geopolitics.borderTension - faEffect - defconEffect)
+      const defconEffect = state.geopolitics.defconLevel < 5 ? (5 - state.geopolitics.defconLevel) * 2 : -1
+      let newBorderTension = Math.max(0, state.geopolitics.borderTension - faEffect - defconEffect + borderTensionPenalty)
       
-      let borderConflictEvent = null
       if (newBorderTension >= 100) {
         newBorderTension = 50 // Reset somewhat
-        borderConflictEvent = { id: `e-${Date.now()}-conflict`, message: 'BORDER CONFLICT! The military has clashed with enemy forces.', severity: 'critical' as AlertSeverity, turn: newTurn, timestamp: Date.now() }
+        eventsToLog.push({ id: `e-${Date.now()}-conflict`, message: 'BORDER CONFLICT! The military has clashed with enemy forces.', severity: 'critical', turn: newTurn, timestamp: Date.now() })
         newSocial.infrastructure -= 10
       }
 
@@ -549,7 +621,7 @@ export const useGameStore = create<GameState>()(
         debtToGDP: newDebtToGDP,
       }
 
-      const events = borderConflictEvent ? [borderConflictEvent, ...state.eventLog].slice(0, 50) : state.eventLog
+      const newEventLog = [...eventsToLog, ...state.eventLog].slice(0, 50)
 
       set({
         turn: newTurn,
@@ -557,11 +629,17 @@ export const useGameStore = create<GameState>()(
         budget: newBudget,
         politicalCapital: newPC,
         socialMetrics: newSocial,
+        economicMetrics: newEconomic,
         isLameDuck: newPC === 0,
         gdpHistory: newGdpHistory,
         approvalHistory: newApprovalHistory,
-        eventLog: events,
-        geopolitics: { ...state.geopolitics, borderTension: newBorderTension }
+        eventLog: newEventLog,
+        geopolitics: { ...state.geopolitics, borderTension: newBorderTension },
+        gamePhase: newGamePhase,
+        turnsUntilElection: newTurnsUntilElection,
+        consecutiveLowApproval: newConsecutiveLowApproval,
+        intelActive: newIntelActive,
+        activeDebuffs: newActiveDebuffs,
       })
     },
 

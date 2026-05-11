@@ -13,51 +13,53 @@ import { AlertCircle, Info, AlertTriangle } from 'lucide-react'
 
 function EventToasts() {
   const { eventLog } = useGameStore()
-  // Only show the 3 most recent events
-  const recentEvents = eventLog.slice(0, 3)
 
   return (
-    <div className="absolute bottom-6 right-6 z-40 flex flex-col-reverse gap-2 pointer-events-none">
-      <AnimatePresence>
-        {recentEvents.map((event, idx) => {
-          let Icon = Info
-          let color = 'text-sky-400'
-          let border = 'border-sky-500/20'
-          let bg = 'bg-slate-900/80'
+    <div className="absolute bottom-6 right-6 z-40 pointer-events-auto">
+      <div className="bg-slate-900/60 backdrop-blur-md border border-slate-700/50 rounded-2xl shadow-2xl p-4 w-[340px] h-64 flex flex-col">
+        <div className="flex items-center gap-2 mb-3 px-1">
+          <Info size={14} className="text-slate-400" />
+          <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest">Live Intel Ticker</h3>
+        </div>
+        <div className="flex-1 overflow-y-auto pr-2 space-y-3 scrollbar-hide">
+          <AnimatePresence>
+            {eventLog.map((event) => {
+              let Icon = Info
+              let color = 'text-sky-400'
+              let bg = 'bg-sky-500/10'
 
-          if (event.severity === 'critical') {
-            Icon = AlertCircle
-            color = 'text-red-400'
-            border = 'border-red-500/30'
-            bg = 'bg-red-950/40'
-          } else if (event.severity === 'warning') {
-            Icon = AlertTriangle
-            color = 'text-amber-400'
-            border = 'border-amber-500/30'
-            bg = 'bg-amber-950/40'
-          }
+              if (event.severity === 'critical') {
+                Icon = AlertCircle
+                color = 'text-red-400'
+                bg = 'bg-red-500/10'
+              } else if (event.severity === 'warning') {
+                Icon = AlertTriangle
+                color = 'text-amber-400'
+                bg = 'bg-amber-500/10'
+              }
 
-          return (
-            <motion.div
-              key={event.id}
-              initial={{ opacity: 0, x: 50, scale: 0.9 }}
-              animate={{ opacity: 1 - idx * 0.2, x: 0, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-              className={`event-item backdrop-blur-md border ${border} ${bg} shadow-lg pointer-events-auto`}
-              style={{ maxWidth: '320px' }}
-            >
-              <Icon size={14} className={`${color} mt-0.5 flex-shrink-0`} />
-              <div>
-                <p className={`text-[10px] font-bold uppercase tracking-wider ${color} mb-0.5`}>
-                  Turn {event.turn}
-                </p>
-                <p className="text-slate-200">{event.message}</p>
-              </div>
-            </motion.div>
-          )
-        })}
-      </AnimatePresence>
+              return (
+                <motion.div
+                  key={event.id}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className={`p-3 rounded-xl border border-white/5 ${bg} shadow-sm`}
+                >
+                  <div className="flex items-start gap-2.5">
+                    <Icon size={14} className={`${color} mt-0.5 flex-shrink-0`} />
+                    <div>
+                      <p className={`text-[9px] font-bold uppercase tracking-wider ${color} mb-0.5`}>
+                        Turn {event.turn}
+                      </p>
+                      <p className="text-slate-200 text-[11px] leading-relaxed">{event.message}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              )
+            })}
+          </AnimatePresence>
+        </div>
+      </div>
     </div>
   )
 }
@@ -97,25 +99,23 @@ export default function GameBoard() {
   const { gamePhase } = useGameStore()
 
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden bg-slate-950">
+    <div className="h-screen w-screen flex relative overflow-hidden bg-slate-950">
       <TopNav />
       
-      <main className="flex-1 flex relative overflow-hidden">
-        <Sidebar />
-        
-        <div className="flex-1 relative">
-          <IsometricMap />
-          <ActionFooter />
-          <EventToasts />
-        </div>
-      </main>
+      <Sidebar />
+      
+      <div className="flex-1 relative">
+        <IsometricMap />
+        <ActionFooter />
+        <EventToasts />
+      </div>
 
       <BriefModal />
       <SetupModal />
 
       {/* Game Over Overlay */}
       <AnimatePresence>
-        {gamePhase === 'game-over' && (
+        {(gamePhase === 'game-over' || gamePhase === 'game_over_lost' || gamePhase === 'impeached') && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -124,15 +124,35 @@ export default function GameBoard() {
             <motion.div
               initial={{ scale: 0.8, y: 20 }}
               animate={{ scale: 1, y: 0 }}
-              className="max-w-md"
+              className="max-w-md bg-slate-900/80 p-8 border border-white/10 rounded-3xl shadow-2xl"
             >
-              <h1 className="text-display font-black text-6xl text-red-500 mb-4">LAME DUCK</h1>
-              <p className="text-xl text-slate-300 mb-8">
-                You have exhausted all Political Capital. The factions have united against you, and your government has collapsed.
-              </p>
+              {gamePhase === 'game_over_lost' && (
+                <>
+                  <h1 className="text-display font-black text-5xl text-red-500 mb-4 drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]">VOTED OUT</h1>
+                  <p className="text-lg text-slate-300 mb-8">
+                    You failed to secure the 272 seats needed. The opposition has formed a new government.
+                  </p>
+                </>
+              )}
+              {gamePhase === 'impeached' && (
+                <>
+                  <h1 className="text-display font-black text-5xl text-red-500 mb-4 drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]">IMPEACHED</h1>
+                  <p className="text-lg text-slate-300 mb-8">
+                    Your approval rating remained critically low for too long. Parliament has passed a vote of no confidence.
+                  </p>
+                </>
+              )}
+              {gamePhase === 'game-over' && (
+                <>
+                  <h1 className="text-display font-black text-5xl text-red-500 mb-4 drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]">LAME DUCK</h1>
+                  <p className="text-lg text-slate-300 mb-8">
+                    You have exhausted all Political Capital. The factions have united against you, and your government has collapsed.
+                  </p>
+                </>
+              )}
               <button
                 onClick={() => window.location.reload()}
-                className="btn-chunky btn-primary px-8 py-3"
+                className="btn-chunky btn-primary px-8 py-3 w-full"
               >
                 Start New Term
               </button>

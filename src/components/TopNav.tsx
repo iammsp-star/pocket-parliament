@@ -13,6 +13,7 @@ import {
   Bell,
   AlertTriangle,
   ChevronRight,
+  AlertCircle,
 } from 'lucide-react'
 import { useMemo } from 'react'
 
@@ -50,7 +51,9 @@ export default function TopNav() {
   const pcPercent = (politicalCapital / maxPoliticalCapital) * 100
 
   const pendingCount = pendingBriefs.filter(b => b.turn <= turn).length
-  const hasCritical = eventLog.slice(0, 5).some(e => e.severity === 'critical')
+  const hasCritical = useGameStore((s) => s.pendingBriefs.some((b) => b.severity === 'critical'))
+  const turnsUntilElection = useGameStore((s) => s.turnsUntilElection)
+  const activeDebuffs = useGameStore((s) => s.activeDebuffs)
 
   const approvalColor = useMemo(() => {
     if (overallApproval >= 60) return 'text-emerald-400'
@@ -59,85 +62,124 @@ export default function TopNav() {
   }, [overallApproval])
 
   return (
-    <header className="relative z-50 flex items-center h-16 px-4 gap-3 glass-bright border-b border-white/5">
-      {/* Sidebar toggle */}
-      <motion.button
-        whileTap={{ scale: 0.9 }}
-        whileHover={{ scale: 1.05 }}
-        onClick={toggleSidebar}
-        className="btn-chunky btn-ghost p-2.5 rounded-xl"
-        title="Toggle Sidebar"
-      >
-        <Menu size={18} />
-      </motion.button>
-
-      {/* Brand / Country Identity */}
-      <div className="flex items-center gap-2.5 mr-2">
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-          className="text-2xl select-none"
+    <header className="absolute top-0 left-0 right-0 z-50 pointer-events-none p-4 flex justify-between items-start gap-4">
+      
+      {/* LEFT PANEL: Identity */}
+      <div className="pointer-events-auto bg-slate-900/60 backdrop-blur-md border border-slate-700/50 rounded-2xl p-2.5 shadow-2xl flex items-center gap-3">
+        {/* Sidebar toggle */}
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          whileHover={{ scale: 1.05 }}
+          onClick={toggleSidebar}
+          className="btn-chunky btn-ghost p-2 rounded-xl"
+          title="Toggle Sidebar"
         >
-          {flagEmoji}
-        </motion.div>
-        <div className="leading-tight">
-          <p className="text-display font-bold text-white text-sm leading-none">{countryName}</p>
-          <p className="text-mono text-xs text-slate-400 leading-none mt-0.5">
-            {leaderTitle} <span className="text-slate-300">{leaderName}</span>
-          </p>
+          <Menu size={18} />
+        </motion.button>
+
+        {/* Brand / Country Identity */}
+        <div className="flex items-center gap-2 mr-1">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+            className="text-2xl select-none"
+          >
+            {flagEmoji}
+          </motion.div>
+          <div className="leading-tight">
+            <p className="text-display font-bold text-white text-sm leading-none">{countryName}</p>
+            <p className="text-mono text-xs text-slate-400 leading-none mt-0.5">
+              {leaderTitle} <span className="text-slate-300">{leaderName}</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="h-8 w-px bg-white/10 mx-1" />
+
+        {/* Global Rank */}
+        <StatPill
+          icon={<Globe2 size={13} className="text-purple-400" />}
+          label="Global Rank"
+          value={`#${globalRank}`}
+          valueClass="text-purple-400"
+          color="purple"
+        />
+
+        {/* Turn & Year */}
+        <div className="flex items-center gap-1.5 bg-slate-800/50 rounded-xl px-3 py-1.5 border border-white/5">
+          <ChevronRight size={13} className="text-indigo-400" />
+          <span className="text-mono text-[10px] uppercase text-slate-400">Turn</span>
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={turn}
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+              className="text-display font-bold text-white text-sm"
+            >
+              {turn}
+            </motion.span>
+          </AnimatePresence>
+          <span className="text-mono text-xs text-slate-500 ml-1">/ {year}</span>
+        </div>
+
+        <div className="h-8 w-px bg-white/10 mx-1" />
+        
+        {/* Election Countdown */}
+        <div className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 border ${turnsUntilElection <= 3 ? 'bg-red-500/20 border-red-500/30' : 'bg-slate-800/50 border-white/5'}`}>
+          <AlertCircle size={13} className={turnsUntilElection <= 3 ? 'text-red-400 animate-pulse' : 'text-slate-400'} />
+          <span className="text-mono text-[10px] uppercase text-slate-400">Election in</span>
+          <span className={`text-display font-bold text-sm ${turnsUntilElection <= 3 ? 'text-red-400' : 'text-white'}`}>{turnsUntilElection}</span>
         </div>
       </div>
 
-      <div className="h-8 w-px bg-white/8 mx-1" />
+      {/* CENTER PANEL: Economy & Debuffs */}
+      <div className="pointer-events-auto flex flex-col items-center gap-2">
+        <div className="bg-slate-900/60 backdrop-blur-md border border-slate-700/50 rounded-2xl p-2.5 shadow-2xl flex items-center gap-3">
+          {/* GDP */}
+          <StatPill
+            icon={<Landmark size={13} className="text-sky-400" />}
+            label="GDP"
+            value={formatCurrency(budget.totalGDP)}
+            sub={
+              <span className={budget.deficit >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                {budget.deficit >= 0 ? '+' : ''}{formatCurrency(budget.deficit)}/q
+              </span>
+            }
+            color="sky"
+          />
 
-      {/* Turn & Year */}
-      <div className="flex items-center gap-1.5 glass rounded-xl px-3 py-1.5">
-        <ChevronRight size={13} className="text-indigo-400" />
-        <span className="text-mono text-xs text-slate-400">Turn</span>
-        <AnimatePresence mode="wait">
-          <motion.span
-            key={turn}
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
-            className="text-display font-bold text-white text-sm"
-          >
-            {turn}
-          </motion.span>
-        </AnimatePresence>
-        <span className="text-mono text-xs text-slate-500 ml-1">/ {year}</span>
+          {/* Debt/GDP */}
+          <StatPill
+            icon={<TrendingUp size={13} className={budget.debtToGDP > 80 ? 'text-red-400' : budget.debtToGDP > 60 ? 'text-amber-400' : 'text-emerald-400'} />}
+            label="Debt/GDP"
+            value={`${budget.debtToGDP.toFixed(0)}%`}
+            valueClass={budget.debtToGDP > 80 ? 'text-red-400' : budget.debtToGDP > 60 ? 'text-amber-400' : 'text-emerald-400'}
+            color="red"
+          />
+        </div>
+
+        {activeDebuffs.length > 0 && (
+          <div className="flex gap-2">
+            {activeDebuffs.map(debuff => (
+              <div key={debuff} className="bg-red-950/80 backdrop-blur-md border border-red-500/50 px-3 py-1 rounded-full flex items-center gap-1.5 shadow-lg shadow-red-900/20">
+                <AlertTriangle size={12} className="text-red-400 animate-pulse" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-red-200">{debuff}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      <div className="flex-1 flex items-center gap-3 overflow-hidden">
-        {/* GDP */}
-        <StatPill
-          icon={<Landmark size={13} className="text-sky-400" />}
-          label="GDP"
-          value={formatCurrency(budget.totalGDP)}
-          sub={
-            <span className={budget.deficit >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-              {budget.deficit >= 0 ? '+' : ''}{formatCurrency(budget.deficit)}/q
-            </span>
-          }
-          color="sky"
-        />
-
-        {/* Debt/GDP */}
-        <StatPill
-          icon={<TrendingUp size={13} className={budget.debtToGDP > 80 ? 'text-red-400' : budget.debtToGDP > 60 ? 'text-amber-400' : 'text-emerald-400'} />}
-          label="Debt/GDP"
-          value={`${budget.debtToGDP.toFixed(0)}%`}
-          valueClass={budget.debtToGDP > 80 ? 'text-red-400' : budget.debtToGDP > 60 ? 'text-amber-400' : 'text-emerald-400'}
-          color="red"
-        />
-
+      {/* RIGHT PANEL: Politics & Actions */}
+      <div className="pointer-events-auto bg-slate-900/60 backdrop-blur-md border border-slate-700/50 rounded-2xl p-2.5 shadow-2xl flex items-center gap-3">
         {/* Political Capital */}
-        <div className="flex items-center gap-2 glass rounded-xl px-3 py-1.5 min-w-[160px]">
+        <div className="flex items-center gap-2 bg-slate-800/50 border border-white/5 rounded-xl px-3 py-1.5 min-w-[140px]">
           <Zap size={13} className={pcColors.text} />
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-mono text-xs text-slate-400">Pol. Capital</span>
+              <span className="text-mono text-[10px] text-slate-400 uppercase">Pol. Capital</span>
               <span className={`text-display font-bold text-xs ${pcColors.text}`}>
                 {politicalCapital}/{maxPoliticalCapital}
               </span>
@@ -160,7 +202,7 @@ export default function TopNav() {
             <motion.span
               animate={{ opacity: [1, 0.3, 1] }}
               transition={{ repeat: Infinity, duration: 1 }}
-              className="text-xs text-red-400 font-bold"
+              className="text-[10px] text-red-400 font-bold"
             >
               LAME DUCK
             </motion.span>
@@ -176,15 +218,6 @@ export default function TopNav() {
           color="green"
         />
 
-        {/* Global Rank */}
-        <StatPill
-          icon={<Globe2 size={13} className="text-purple-400" />}
-          label="Global Rank"
-          value={`#${globalRank}`}
-          valueClass="text-purple-400"
-          color="purple"
-        />
-
         {/* Threat Level */}
         <StatPill
           icon={<AlertTriangle size={13} className={geopolitics.defconLevel <= 3 || geopolitics.borderTension >= 80 ? 'text-red-400' : 'text-amber-400'} />}
@@ -193,40 +226,42 @@ export default function TopNav() {
           valueClass={geopolitics.defconLevel <= 3 ? 'text-red-400 animate-pulse' : 'text-amber-400'}
           color="red"
         />
-      </div>
 
-      {/* Right actions */}
-      <div className="flex items-center gap-2">
-        {/* Pending alerts */}
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          whileHover={{ scale: 1.05 }}
-          onClick={openBrief}
-          className="relative p-2.5 rounded-xl btn-chunky btn-ghost"
-        >
-          <Bell size={16} className={hasCritical ? 'text-red-400' : 'text-slate-400'} />
-          {pendingCount > 0 && (
-            <motion.span
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="absolute -top-1 -right-1 w-4.5 h-4.5 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none"
-              style={{ width: 18, height: 18 }}
-            >
-              {pendingCount}
-            </motion.span>
-          )}
-        </motion.button>
+        <div className="h-8 w-px bg-white/10 mx-1" />
 
-        {/* Advance Turn */}
-        <motion.button
-          whileTap={{ scale: 0.94 }}
-          whileHover={{ scale: 1.03, y: -1 }}
-          onClick={advanceTurn}
-          className="btn-chunky btn-ghost px-3 py-2 text-xs gap-1.5"
-        >
-          <ChevronRight size={14} className="text-indigo-400" />
-          <span className="text-display font-semibold text-slate-300">Next Turn</span>
-        </motion.button>
+        {/* Right actions */}
+        <div className="flex items-center gap-2">
+          {/* Pending alerts */}
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            whileHover={{ scale: 1.05 }}
+            onClick={openBrief}
+            className="relative p-2.5 rounded-xl btn-chunky btn-ghost bg-slate-800/50"
+          >
+            <Bell size={16} className={hasCritical ? 'text-red-400' : 'text-slate-400'} />
+            {pendingCount > 0 && (
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute -top-1 -right-1 w-4.5 h-4.5 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none"
+                style={{ width: 18, height: 18 }}
+              >
+                {pendingCount}
+              </motion.span>
+            )}
+          </motion.button>
+
+          {/* Advance Turn */}
+          <motion.button
+            whileTap={{ scale: 0.94 }}
+            whileHover={{ scale: 1.03, y: -1 }}
+            onClick={advanceTurn}
+            className="btn-chunky btn-primary px-4 py-2 text-xs gap-1.5"
+          >
+            <ChevronRight size={14} className="text-white" />
+            <span className="text-display font-semibold text-white">Next Turn</span>
+          </motion.button>
+        </div>
       </div>
     </header>
   )
@@ -245,10 +280,10 @@ interface StatPillProps {
 
 function StatPill({ icon, label, value, sub, valueClass = 'text-white' }: StatPillProps) {
   return (
-    <div className="flex items-center gap-2 glass rounded-xl px-3 py-1.5">
+    <div className="flex items-center gap-2 bg-slate-800/50 border border-white/5 rounded-xl px-3 py-1.5">
       {icon}
       <div className="leading-tight">
-        <p className="text-mono text-[10px] text-slate-500 uppercase tracking-wider">{label}</p>
+        <p className="text-mono text-[10px] text-slate-400 uppercase tracking-wider">{label}</p>
         <div className="flex items-center gap-1.5">
           <AnimatePresence mode="wait">
             <motion.p
