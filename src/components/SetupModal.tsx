@@ -41,14 +41,15 @@ export default function SetupModal() {
             >
               <div className="bg-gradient-to-r from-indigo-950/80 to-slate-900 px-8 py-6 border-b border-white/10">
                 <h1 className="text-display font-black text-2xl text-white">Pocket Parliament</h1>
-                <p className="text-indigo-300 text-sm mt-1 font-medium">Initialize your nation's identity</p>
+                <p className="text-indigo-300 text-sm mt-1 font-medium">Initialize your nation&apos;s identity</p>
               </div>
 
               <form onSubmit={handleSubmit} className="p-8 space-y-6">
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Nation Name</label>
+                    <label htmlFor="nation-name" className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Nation Name</label>
                     <input
+                      id="nation-name"
                       type="text"
                       required
                       value={formData.countryName}
@@ -60,8 +61,9 @@ export default function SetupModal() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Leader Title</label>
+                      <label htmlFor="leader-title" className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Leader Title</label>
                       <input
+                        id="leader-title"
                         type="text"
                         required
                         value={formData.leaderTitle}
@@ -71,8 +73,9 @@ export default function SetupModal() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Leader Name</label>
+                      <label htmlFor="leader-name" className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Leader Name</label>
                       <input
+                        id="leader-name"
                         type="text"
                         required
                         value={formData.leaderName}
@@ -85,11 +88,13 @@ export default function SetupModal() {
 
                   <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Flag Emoji</label>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2" role="group" aria-label="Select flag emoji">
                       {['🏛️', '🦅', '🦁', '🌟', '⚙️', '⚓', '🔰', '⚜️'].map(emoji => (
                         <button
                           key={emoji}
                           type="button"
+                          aria-label={`Select flag emoji ${emoji}`}
+                          aria-pressed={formData.flagEmoji === emoji}
                           onClick={() => setFormData({ ...formData, flagEmoji: emoji })}
                           className={`text-2xl p-3 rounded-xl transition-all ${
                             formData.flagEmoji === emoji 
