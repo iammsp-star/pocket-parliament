@@ -354,7 +354,9 @@ function SocialTab({ social }: { social: any }) {
       <SectionHeader title="Social Fabric" subtitle="Quality of life indicators" />
 
       <div className="space-y-3">
-        {SOCIAL_METRICS_CONFIG.map(({ key, label, emoji, higher }) => {
+        {/* Performance Optimization: Used the array 'index' from .map() to calculate animation delay
+            instead of using .findIndex() on each iteration which causes O(N^2) complexity. */}
+        {SOCIAL_METRICS_CONFIG.map(({ key, label, emoji, higher }, index) => {
           const rawValue = social[key]
           const displayValue = higher ? rawValue : 100 - rawValue
           const isGood = higher ? rawValue >= 60 : rawValue <= 40
@@ -377,7 +379,7 @@ function SocialTab({ social }: { social: any }) {
                   style={{ backgroundColor: color, width: `${rawValue}%` }}
                   initial={{ width: 0 }}
                   animate={{ width: `${rawValue}%` }}
-                  transition={{ duration: 0.8, delay: 0.05 * SOCIAL_METRICS_CONFIG.findIndex(m => m.key === key) }}
+                  transition={{ duration: 0.8, delay: 0.05 * index }}
                 />
               </div>
             </div>
