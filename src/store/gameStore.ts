@@ -15,6 +15,17 @@ export interface FactionApproval {
   youth: number
 }
 
+export interface Ministry {
+  allocatedBudget: number // percentage 0-100
+  ministerEfficiency: number // 0.5 to 1.5
+}
+
+export interface Geopolitics {
+  borderTension: number // 0-100
+  militaryPower: number
+  defconLevel: number // 5 down to 1
+}
+
 export interface LaborDemographics {
   primary: number     // percentage of workforce
   secondary: number
@@ -129,6 +140,16 @@ export interface GameState {
   factionApproval: FactionApproval
   overallApproval: number   // computed from factions
 
+  // ─── Modern Age Systems ──────────────────────────────────────────────
+  ministries: {
+    defense: Ministry
+    health: Ministry
+    education: Ministry
+    foreignAffairs: Ministry
+  }
+  geopolitics: Geopolitics
+  activeLaws: string[]
+
   // ─── Events & Briefs ─────────────────────────────────────────────────
   currentBrief: GameBrief | null
   pendingBriefs: GameBrief[]
@@ -142,7 +163,7 @@ export interface GameState {
 
   // ─── UI State ────────────────────────────────────────────────────────
   isSidebarOpen: boolean
-  activeTab: 'labor' | 'economy' | 'social' | 'diplomacy'
+  activeTab: 'labor' | 'economy' | 'social' | 'diplomacy' | 'cabinet' | 'geopolitics' | 'laws'
 
   // ─── GDP History (for charts) ─────────────────────────────────────────
   gdpHistory: { turn: number; gdp: number; year: number }[]
@@ -167,6 +188,10 @@ export interface GameState {
   adjustTax: (type: 'income' | 'corporate' | 'tariff', value: number) => void
   openSetupModal: () => void
   closeSetupModal: () => void
+  setDefcon: (level: number) => void
+  appointMinister: (ministry: keyof GameState['ministries']) => void
+  setMinistryBudget: (ministry: keyof GameState['ministries'], budget: number) => void
+  passLaw: (lawId: string) => void
 }
 
 // ─── Starting State (Underdog Nation) ────────────────────────────────────────
@@ -342,6 +367,20 @@ export const useGameStore = create<GameState>()(
     },
     overallApproval: 39,
 
+    // Modern Age Systems
+    ministries: {
+      defense: { allocatedBudget: 15, ministerEfficiency: 1.0 },
+      health: { allocatedBudget: 25, ministerEfficiency: 1.0 },
+      education: { allocatedBudget: 25, ministerEfficiency: 1.0 },
+      foreignAffairs: { allocatedBudget: 10, ministerEfficiency: 1.0 },
+    },
+    geopolitics: {
+      borderTension: 40,
+      militaryPower: 31,
+      defconLevel: 5,
+    },
+    activeLaws: [],
+
     // Events & Briefs
     currentBrief: null,
     pendingBriefs: STARTING_BRIEFS,
@@ -452,15 +491,49 @@ export const useGameStore = create<GameState>()(
       const newTurn = state.turn + 1
       const newYear = newTurn % 4 === 0 ? state.year + 1 : state.year
 
+      // Apply Laws Multipliers
+      // Note: In a real implementation we would import LAWS, but for the tick we can fetch them locally or via the UI.
+      // To keep things simple and decoupled, we assume laws primarily apply passive effects here.
+      let popGrowthMult = 1.0
+      let secondaryGrowthMult = 1.0
+      
+      if (state.activeLaws.includes('law-free-healthcare')) popGrowthMult = 1.5
+      if (state.activeLaws.includes('law-corp-deregulation')) secondaryGrowthMult = 2.0
+
       // Natural economic tick
-      const gdpGrowth = state.economicMetrics.gdpGrowthRate / 100
+      const gdpGrowth = (state.economicMetrics.gdpGrowthRate / 100) * secondaryGrowthMult
       const newGDP = Math.round(state.budget.totalGDP * (1 + gdpGrowth))
-      const newDeficit = state.budget.revenue - state.budget.expenditure
+      
+      // Defcon costs
+      const defconCostMult = { 5: 1, 4: 1.2, 3: 1.5, 2: 2.0, 1: 3.0 }[state.geopolitics.defconLevel] || 1
+      const militarySpending = (state.budget.expenditure * (state.ministries.defense.allocatedBudget / 100)) * defconCostMult
+      const totalExpenditure = state.budget.expenditure + (militarySpending - (state.budget.expenditure * (state.ministries.defense.allocatedBudget / 100)))
+
+      const newDeficit = state.budget.revenue - totalExpenditure
       const newDebtToGDP = Math.max(0, state.budget.debtToGDP + (newDeficit < 0 ? 2 : -1))
 
       // Natural political capital recovery
       const pcRecovery = state.overallApproval > 50 ? 3 : state.overallApproval > 30 ? 1 : -2
       const newPC = Math.max(0, Math.min(state.maxPoliticalCapital, state.politicalCapital + pcRecovery))
+
+      // Ministry effects on Social Metrics
+      // If budget < 15, things decay.
+      const getChange = (min: Ministry) => (min.allocatedBudget - 15) * 0.1 * min.ministerEfficiency
+      const newSocial = { ...state.socialMetrics }
+      newSocial.healthcare = Math.max(0, Math.min(100, newSocial.healthcare + getChange(state.ministries.health) * popGrowthMult))
+      newSocial.education = Math.max(0, Math.min(100, newSocial.education + getChange(state.ministries.education)))
+      
+      // Geopolitics: Foreign Affairs lowers tension. High DEFCON (lower number) lowers tension.
+      const faEffect = state.ministries.foreignAffairs.allocatedBudget * 0.05 * state.ministries.foreignAffairs.ministerEfficiency
+      const defconEffect = state.geopolitics.defconLevel < 5 ? (5 - state.geopolitics.defconLevel) * 2 : -1 // peace increases tension slowly, defcon lowers it
+      let newBorderTension = Math.max(0, state.geopolitics.borderTension - faEffect - defconEffect)
+      
+      let borderConflictEvent = null
+      if (newBorderTension >= 100) {
+        newBorderTension = 50 // Reset somewhat
+        borderConflictEvent = { id: `e-${Date.now()}-conflict`, message: 'BORDER CONFLICT! The military has clashed with enemy forces.', severity: 'critical' as AlertSeverity, turn: newTurn, timestamp: Date.now() }
+        newSocial.infrastructure -= 10
+      }
 
       const newGdpHistory = [...state.gdpHistory, { turn: newTurn, gdp: newGDP, year: newYear }].slice(-20)
       const newApprovalHistory = [...state.approvalHistory, {
@@ -476,14 +549,19 @@ export const useGameStore = create<GameState>()(
         debtToGDP: newDebtToGDP,
       }
 
+      const events = borderConflictEvent ? [borderConflictEvent, ...state.eventLog].slice(0, 50) : state.eventLog
+
       set({
         turn: newTurn,
         year: newYear,
         budget: newBudget,
         politicalCapital: newPC,
+        socialMetrics: newSocial,
         isLameDuck: newPC === 0,
         gdpHistory: newGdpHistory,
         approvalHistory: newApprovalHistory,
+        eventLog: events,
+        geopolitics: { ...state.geopolitics, borderTension: newBorderTension }
       })
     },
 
@@ -519,6 +597,49 @@ export const useGameStore = create<GameState>()(
 
     openSetupModal: () => set({ isSetupModalOpen: true }),
     closeSetupModal: () => set({ isSetupModalOpen: false }),
+
+    setDefcon: (level) => set((state) => ({ geopolitics: { ...state.geopolitics, defconLevel: level } })),
+    
+    appointMinister: (ministryKey) => set((state) => {
+      if (state.politicalCapital < 10) return state
+      const newEfficiency = 0.5 + Math.random() // 0.5 to 1.5
+      return {
+        politicalCapital: state.politicalCapital - 10,
+        ministries: {
+          ...state.ministries,
+          [ministryKey]: { ...state.ministries[ministryKey], ministerEfficiency: newEfficiency }
+        }
+      }
+    }),
+
+    setMinistryBudget: (ministryKey, budget) => set((state) => ({
+      ministries: {
+        ...state.ministries,
+        [ministryKey]: { ...state.ministries[ministryKey], allocatedBudget: budget }
+      }
+    })),
+
+    passLaw: (lawId) => set((state) => {
+      if (state.activeLaws.includes(lawId)) return state
+      // Simulate parliamentary vote - cost 20 PC
+      if (state.politicalCapital < 20) return state
+      
+      const successChance = state.overallApproval // Approval rating roughly translates to vote success percentage
+      const roll = Math.random() * 100
+
+      if (roll <= successChance) {
+        return {
+          politicalCapital: state.politicalCapital - 20,
+          activeLaws: [...state.activeLaws, lawId],
+          eventLog: [{ id: `law-${Date.now()}`, message: 'Law successfully passed the Lok Sabha!', severity: 'info' as AlertSeverity, turn: state.turn, timestamp: Date.now() }, ...state.eventLog].slice(0, 50)
+        }
+      } else {
+        return {
+          politicalCapital: state.politicalCapital - 20,
+          eventLog: [{ id: `law-${Date.now()}`, message: 'Law failed to pass the Lok Sabha!', severity: 'warning' as AlertSeverity, turn: state.turn, timestamp: Date.now() }, ...state.eventLog].slice(0, 50)
+        }
+      }
+    }),
   }))
 )
 

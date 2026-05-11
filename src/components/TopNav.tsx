@@ -43,6 +43,7 @@ export default function TopNav() {
     toggleSidebar,
     advanceTurn,
     openBrief,
+    geopolitics,
   } = useGameStore()
 
   const pcColors = getPCColor(politicalCapital)
@@ -182,6 +183,15 @@ export default function TopNav() {
           value={`#${globalRank}`}
           valueClass="text-purple-400"
           color="purple"
+        />
+
+        {/* Threat Level */}
+        <StatPill
+          icon={<AlertTriangle size={13} className={geopolitics.defconLevel <= 3 || geopolitics.borderTension >= 80 ? 'text-red-400' : 'text-amber-400'} />}
+          label="Threat"
+          value={`DEFCON ${geopolitics.defconLevel}`}
+          valueClass={geopolitics.defconLevel <= 3 ? 'text-red-400 animate-pulse' : 'text-amber-400'}
+          color="red"
         />
       </div>
 

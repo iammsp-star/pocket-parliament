@@ -61,6 +61,15 @@ export default function Sidebar() {
     factionApproval,
     gdpHistory,
     approvalHistory,
+    ministries,
+    geopolitics,
+    activeLaws,
+    politicalCapital,
+    overallApproval,
+    appointMinister,
+    setMinistryBudget,
+    setDefcon,
+    passLaw,
   } = useGameStore()
 
   const laborData = [
@@ -90,6 +99,9 @@ export default function Sidebar() {
     { id: 'economy', label: '📈 Economy' },
     { id: 'social', label: '🏥 Social' },
     { id: 'diplomacy', label: '🤝 Factions' },
+    { id: 'cabinet', label: '🏛️ Cabinet' },
+    { id: 'geopolitics', label: '🌍 Geopolitics' },
+    { id: 'laws', label: '📜 Laws' },
   ] as const
 
   return (
@@ -129,6 +141,9 @@ export default function Sidebar() {
                 {activeTab === 'economy' && <EconomyTab gdpData={gdpChartData} budget={budget} economic={economicMetrics} />}
                 {activeTab === 'social' && <SocialTab social={socialMetrics} />}
                 {activeTab === 'diplomacy' && <FactionsTab factions={factionApproval} history={approvalChartData} />}
+                {activeTab === 'cabinet' && <CabinetTab ministries={ministries} appointMinister={appointMinister} setMinistryBudget={setMinistryBudget} pc={politicalCapital} />}
+                {activeTab === 'geopolitics' && <GeopoliticsTab geopolitics={geopolitics} setDefcon={setDefcon} />}
+                {activeTab === 'laws' && <LawsTab activeLaws={activeLaws} passLaw={passLaw} pc={politicalCapital} approval={overallApproval} />}
               </motion.div>
             </AnimatePresence>
           </div>
@@ -432,6 +447,149 @@ function FactionsTab({ factions, history }: { factions: any; history: any[] }) {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ─── Cabinet Tab ───────────────────────────────────────────────────────────────
+
+function CabinetTab({ ministries, appointMinister, setMinistryBudget, pc }: any) {
+  const ministerConfig = [
+    { key: 'defense', label: 'Defense Ministry', icon: '🛡️', color: '#ef4444' },
+    { key: 'health', label: 'Health & Human Services', icon: '🏥', color: '#3b82f6' },
+    { key: 'education', label: 'Education & Science', icon: '🎓', color: '#eab308' },
+    { key: 'foreignAffairs', label: 'Foreign Affairs', icon: '🌍', color: '#a855f7' },
+  ]
+
+  return (
+    <div className="space-y-4">
+      <SectionHeader title="Cabinet Ministers" subtitle="Allocate budgets and manage officials" />
+
+      {ministerConfig.map((m) => {
+        const min = ministries[m.key]
+        return (
+          <div key={m.key} className="metric-card space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold text-slate-200">{m.icon} {m.label}</span>
+              <span className="text-[10px] text-slate-400">Eff: <span className="text-white font-mono">{min.ministerEfficiency.toFixed(2)}x</span></span>
+            </div>
+            
+            <div className="flex justify-between text-[10px] text-slate-400 mt-2">
+              <span>Budget Allocation</span>
+              <span>{min.allocatedBudget}%</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="50"
+              value={min.allocatedBudget}
+              onChange={(e) => setMinistryBudget(m.key, parseInt(e.target.value))}
+              className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer"
+              style={{ accentColor: m.color }}
+            />
+            
+            <button
+              onClick={() => appointMinister(m.key)}
+              disabled={pc < 10}
+              className="mt-2 w-full py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-[10px] text-white rounded border border-white/10 transition-colors disabled:opacity-50 flex justify-between"
+            >
+              <span>Appoint New Minister</span>
+              <span className="text-amber-400 font-bold">10 PC</span>
+            </button>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── Geopolitics Tab ─────────────────────────────────────────────────────────
+
+function GeopoliticsTab({ geopolitics, setDefcon }: any) {
+  return (
+    <div className="space-y-4">
+      <SectionHeader title="Geopolitics" subtitle="Border tension & Defense Readiness" />
+
+      <div className="metric-card text-center">
+        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-2">Border Tension</p>
+        <p className={`text-display font-black text-4xl ${geopolitics.borderTension > 80 ? 'text-red-500' : geopolitics.borderTension > 50 ? 'text-amber-500' : 'text-emerald-500'}`}>
+          {geopolitics.borderTension.toFixed(0)}%
+        </p>
+        <div className="mt-4 stat-bar bg-slate-800">
+          <motion.div
+            className="stat-bar-fill"
+            style={{ backgroundColor: geopolitics.borderTension > 80 ? '#ef4444' : geopolitics.borderTension > 50 ? '#f59e0b' : '#22c55e', width: `${geopolitics.borderTension}%` }}
+            initial={{ width: 0 }}
+            animate={{ width: `${geopolitics.borderTension}%` }}
+          />
+        </div>
+        <p className="text-[10px] text-slate-500 mt-2">If tension reaches 100%, a Border Conflict will occur.</p>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">DEFCON Level</p>
+        <div className="grid grid-cols-5 gap-1">
+          {[5, 4, 3, 2, 1].map((level) => (
+            <button
+              key={level}
+              onClick={() => setDefcon(level)}
+              className={`py-2 rounded-lg text-xs font-bold border transition-colors ${
+                geopolitics.defconLevel === level
+                  ? level === 1 ? 'bg-red-500 border-red-400 text-white animate-pulse' : level <= 3 ? 'bg-amber-500 border-amber-400 text-black' : 'bg-emerald-500 border-emerald-400 text-black'
+                  : 'bg-slate-800 border-white/10 text-slate-500 hover:bg-slate-700'
+              }`}
+            >
+              {level}
+            </button>
+          ))}
+        </div>
+        <p className="text-[10px] text-slate-400 mt-1">Lower DEFCON = High Military Spending & Tension Deterrence</p>
+      </div>
+    </div>
+  )
+}
+
+// ─── Laws Tab ─────────────────────────────────────────────────────────────────
+
+import { LAWS } from '@/data/laws'
+
+function LawsTab({ activeLaws, passLaw, pc, approval }: any) {
+  return (
+    <div className="space-y-4">
+      <SectionHeader title="Constitution & Laws" subtitle="Pass ideological decrees" />
+      
+      <div className="metric-card bg-slate-900 border border-slate-700">
+        <p className="text-[10px] text-slate-400 text-center">Lok Sabha Voting Power</p>
+        <p className="text-display font-bold text-lg text-center text-emerald-400">~{approval}% Success Chance</p>
+      </div>
+
+      <div className="space-y-3">
+        {LAWS.map((law) => {
+          const isActive = activeLaws.includes(law.id)
+          return (
+            <div key={law.id} className={`p-3 rounded-xl border ${isActive ? 'bg-indigo-900/30 border-indigo-500/50' : 'bg-slate-800/50 border-white/10'}`}>
+              <div className="flex justify-between items-start mb-1">
+                <span className={`text-xs font-bold ${isActive ? 'text-indigo-300' : 'text-slate-200'}`}>📜 {law.name}</span>
+                {isActive ? (
+                  <span className="text-[9px] uppercase font-bold text-emerald-400 px-1.5 py-0.5 bg-emerald-500/20 rounded">Active</span>
+                ) : (
+                  <span className="text-[9px] uppercase font-bold text-amber-400">{law.cost} PC</span>
+                )}
+              </div>
+              <p className="text-[10px] text-slate-400 mb-2 leading-relaxed">{law.description}</p>
+              {!isActive && (
+                <button
+                  onClick={() => passLaw(law.id)}
+                  disabled={pc < law.cost}
+                  className="w-full py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:bg-slate-700 text-[10px] text-white font-semibold rounded transition-colors"
+                >
+                  Propose to Lok Sabha
+                </button>
+              )}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
