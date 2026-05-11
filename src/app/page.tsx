@@ -5,6 +5,7 @@ import Sidebar from '@/components/Sidebar'
 import IsometricMap from '@/components/IsometricMap'
 import BriefModal from '@/components/BriefModal'
 import SetupModal from '@/components/SetupModal'
+import TutorialOverlay from '@/components/TutorialOverlay'
 import { useGameStore } from '@/store/gameStore'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AlertCircle, Info, AlertTriangle } from 'lucide-react'
@@ -96,15 +97,21 @@ function ActionFooter() {
 // ─── Main Game Layout ────────────────────────────────────────────────────────
 
 export default function GameBoard() {
-  const { gamePhase } = useGameStore()
+  const { gamePhase, isTutorialActive, tutorialStep } = useGameStore()
 
   return (
     <div className="h-screen w-screen flex relative overflow-hidden bg-slate-950">
-      <TopNav />
+      <TutorialOverlay />
+
+      <div className={`transition-all duration-500 ${isTutorialActive && tutorialStep === 1 ? 'relative z-[70] pointer-events-auto' : 'z-10'}`}>
+        <TopNav />
+      </div>
       
-      <Sidebar />
+      <div className={`transition-all duration-500 ${isTutorialActive && tutorialStep === 3 ? 'relative z-[70] pointer-events-auto shadow-2xl' : 'z-10'}`}>
+        <Sidebar />
+      </div>
       
-      <div className="flex-1 relative">
+      <div className={`flex-1 relative transition-all duration-500 ${isTutorialActive && tutorialStep === 2 ? 'z-[70] pointer-events-auto' : 'z-0'}`}>
         <IsometricMap />
         <ActionFooter />
         <EventToasts />

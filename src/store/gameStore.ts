@@ -168,6 +168,8 @@ export interface GameState {
   // ─── UI State ────────────────────────────────────────────────────────
   isSidebarOpen: boolean
   activeTab: 'labor' | 'economy' | 'social' | 'diplomacy' | 'cabinet' | 'geopolitics' | 'laws'
+  isTutorialActive: boolean
+  tutorialStep: number
 
   // ─── GDP History (for charts) ─────────────────────────────────────────
   gdpHistory: { turn: number; gdp: number; year: number }[]
@@ -197,6 +199,8 @@ export interface GameState {
   setMinistryBudget: (ministry: keyof GameState['ministries'], budget: number) => void
   passLaw: (lawId: string) => void
   fundIntelligence: () => void
+  completeTutorial: () => void
+  setTutorialStep: (step: number) => void
 }
 
 // ─── Starting State (Underdog Nation) ────────────────────────────────────────
@@ -410,6 +414,8 @@ export const useGameStore = create<GameState>()(
     // UI
     isSidebarOpen: true,
     activeTab: 'labor',
+    isTutorialActive: false, // Will be hydrated by client component or useEffect
+    tutorialStep: 0,
 
     // History
     gdpHistory: [
@@ -509,6 +515,7 @@ export const useGameStore = create<GameState>()(
 
     advanceTurn: () => {
       const state = get()
+      if (state.isTutorialActive) return
       if (state.gamePhase === 'game_over_lost' || state.gamePhase === 'game_over_won' || state.gamePhase === 'impeached') return
 
       const newTurn = state.turn + 1
@@ -675,6 +682,15 @@ export const useGameStore = create<GameState>()(
 
     openSetupModal: () => set({ isSetupModalOpen: true }),
     closeSetupModal: () => set({ isSetupModalOpen: false }),
+
+    completeTutorial: () => {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('tutorialCompleted', 'true')
+      }
+      set({ isTutorialActive: false })
+    },
+
+    setTutorialStep: (step: number) => set({ tutorialStep: step }),
 
     setDefcon: (level) => set((state) => ({ geopolitics: { ...state.geopolitics, defconLevel: level } })),
     
