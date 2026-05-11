@@ -6,13 +6,14 @@ import IsometricMap from '@/components/IsometricMap'
 import BriefModal from '@/components/BriefModal'
 import SetupModal from '@/components/SetupModal'
 import { useGameStore } from '@/store/gameStore'
+import { useShallow } from 'zustand/react/shallow'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AlertCircle, Info, AlertTriangle } from 'lucide-react'
 
 // ─── Toast / Event Log Overlay ──────────────────────────────────────────────
 
 function EventToasts() {
-  const { eventLog } = useGameStore()
+  const eventLog = useGameStore((s) => s.eventLog)
   // Only show the 3 most recent events
   const recentEvents = eventLog.slice(0, 3)
 
@@ -65,7 +66,9 @@ function EventToasts() {
 // ─── Review Next Brief Floating Button ────────────────────────────────────────
 
 function ActionFooter() {
-  const { pendingBriefs, turn, openBrief } = useGameStore()
+  // Optimize re-renders by only subscribing to needed state
+  // Using useShallow prevents re-render if unselected state changes
+  const { pendingBriefs, turn, openBrief } = useGameStore(useShallow((s) => ({ pendingBriefs: s.pendingBriefs, turn: s.turn, openBrief: s.openBrief })))
   const pendingCount = pendingBriefs.filter(b => b.turn <= turn).length
 
   if (pendingCount === 0) return null
@@ -94,7 +97,7 @@ function ActionFooter() {
 // ─── Main Game Layout ────────────────────────────────────────────────────────
 
 export default function GameBoard() {
-  const { gamePhase } = useGameStore()
+  const gamePhase = useGameStore((s) => s.gamePhase)
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden bg-slate-950">

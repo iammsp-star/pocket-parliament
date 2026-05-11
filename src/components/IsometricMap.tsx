@@ -198,7 +198,7 @@ function IsometricScene() {
       }
     }
     return tiles
-  }, [socialMetrics, economicMetrics, laborDemographics])
+  }, [laborDemographics, environmentQuality, infrastructure])
 
   const showAirplanes = tourism > 20
   const showSmoke = socialMetrics.environmentQuality < 50

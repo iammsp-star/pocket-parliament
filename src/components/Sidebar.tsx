@@ -1,6 +1,7 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
+import { useShallow } from 'zustand/react/shallow'
 import { useGameStore, formatCurrency, getApprovalColor } from '@/store/gameStore'
 import {
   PieChart,
@@ -50,6 +51,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 }
 
 export default function Sidebar() {
+  // Optimize re-renders by only subscribing to needed state
+  // Using useShallow prevents re-render if unselected state changes
   const {
     isSidebarOpen,
     activeTab,
@@ -61,7 +64,18 @@ export default function Sidebar() {
     factionApproval,
     gdpHistory,
     approvalHistory,
-  } = useGameStore()
+  } = useGameStore(useShallow((s) => ({
+    isSidebarOpen: s.isSidebarOpen,
+    activeTab: s.activeTab,
+    setActiveTab: s.setActiveTab,
+    laborDemographics: s.laborDemographics,
+    budget: s.budget,
+    economicMetrics: s.economicMetrics,
+    socialMetrics: s.socialMetrics,
+    factionApproval: s.factionApproval,
+    gdpHistory: s.gdpHistory,
+    approvalHistory: s.approvalHistory,
+  })))
 
   const laborData = [
     { name: 'Agriculture', value: laborDemographics.primary, color: SECTOR_COLORS.primary },

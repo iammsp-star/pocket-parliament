@@ -1,11 +1,17 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
+import { useShallow } from 'zustand/react/shallow'
 import { useGameStore } from '@/store/gameStore'
 import { useState } from 'react'
 
 export default function SetupModal() {
-  const { isSetupModalOpen, setupCountry } = useGameStore()
+  // Optimize re-renders by only subscribing to needed state
+  // Using useShallow prevents re-render if unselected state changes
+  const { isSetupModalOpen, setupCountry } = useGameStore(useShallow((s) => ({
+    isSetupModalOpen: s.isSetupModalOpen,
+    setupCountry: s.setupCountry,
+  })))
   const [formData, setFormData] = useState({
     countryName: 'Varantia',
     leaderTitle: 'Prime Minister',
@@ -41,7 +47,7 @@ export default function SetupModal() {
             >
               <div className="bg-gradient-to-r from-indigo-950/80 to-slate-900 px-8 py-6 border-b border-white/10">
                 <h1 className="text-display font-black text-2xl text-white">Pocket Parliament</h1>
-                <p className="text-indigo-300 text-sm mt-1 font-medium">Initialize your nation's identity</p>
+                <p className="text-indigo-300 text-sm mt-1 font-medium">Initialize your nation&apos;s identity</p>
               </div>
 
               <form onSubmit={handleSubmit} className="p-8 space-y-6">

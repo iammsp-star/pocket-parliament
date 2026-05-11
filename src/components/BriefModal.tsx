@@ -1,6 +1,7 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
+import { useShallow } from 'zustand/react/shallow'
 import { useGameStore, BriefChoice, AlertSeverity } from '@/store/gameStore'
 import { X, Zap, TrendingUp, TrendingDown, AlertTriangle, AlertCircle, Info } from 'lucide-react'
 import { useState } from 'react'
@@ -152,7 +153,16 @@ function ChoiceCard({
 // ─── Main Modal ───────────────────────────────────────────────────────────────
 
 export default function BriefModal() {
-  const { isBriefModalOpen, currentBrief, closeBrief, applyChoice, politicalCapital, turn } = useGameStore()
+  // Optimize re-renders by only subscribing to needed state
+  // Using useShallow prevents re-render if unselected state changes
+  const { isBriefModalOpen, currentBrief, closeBrief, applyChoice, politicalCapital, turn } = useGameStore(useShallow((s) => ({
+    isBriefModalOpen: s.isBriefModalOpen,
+    currentBrief: s.currentBrief,
+    closeBrief: s.closeBrief,
+    applyChoice: s.applyChoice,
+    politicalCapital: s.politicalCapital,
+    turn: s.turn,
+  })))
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null)
   const [isConfirming, setIsConfirming] = useState(false)
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
+import { useShallow } from 'zustand/react/shallow'
 import { useGameStore, formatCurrency } from '@/store/gameStore'
 import {
   Landmark,
@@ -25,6 +26,8 @@ const getPCColor = (pc: number) => {
 const getDeficitColor = (deficit: number) => deficit >= 0 ? 'text-emerald-400' : 'text-red-400'
 
 export default function TopNav() {
+  // Optimize re-renders by only subscribing to needed state
+  // Using useShallow prevents re-render if unselected state changes
   const {
     countryName,
     leaderTitle,
@@ -43,7 +46,25 @@ export default function TopNav() {
     toggleSidebar,
     advanceTurn,
     openBrief,
-  } = useGameStore()
+  } = useGameStore(useShallow((s) => ({
+    countryName: s.countryName,
+    leaderTitle: s.leaderTitle,
+    leaderName: s.leaderName,
+    flagEmoji: s.flagEmoji,
+    turn: s.turn,
+    year: s.year,
+    politicalCapital: s.politicalCapital,
+    maxPoliticalCapital: s.maxPoliticalCapital,
+    isLameDuck: s.isLameDuck,
+    budget: s.budget,
+    overallApproval: s.overallApproval,
+    globalRank: s.globalRank,
+    pendingBriefs: s.pendingBriefs,
+    eventLog: s.eventLog,
+    toggleSidebar: s.toggleSidebar,
+    advanceTurn: s.advanceTurn,
+    openBrief: s.openBrief,
+  })))
 
   const pcColors = getPCColor(politicalCapital)
   const pcPercent = (politicalCapital / maxPoliticalCapital) * 100
