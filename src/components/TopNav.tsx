@@ -49,8 +49,18 @@ export default function TopNav() {
   const pcColors = getPCColor(politicalCapital)
   const pcPercent = (politicalCapital / maxPoliticalCapital) * 100
 
-  const pendingCount = pendingBriefs.filter(b => b.turn <= turn).length
-  const hasCritical = eventLog.slice(0, 5).some(e => e.severity === 'critical')
+  const pendingCount = useMemo(() =>
+    pendingBriefs.reduce((acc, b) => b.turn <= turn ? acc + 1 : acc, 0),
+    [pendingBriefs, turn]
+  )
+
+  const hasCritical = useMemo(() => {
+    const limit = Math.min(eventLog.length, 5)
+    for (let i = 0; i < limit; i++) {
+      if (eventLog[i].severity === 'critical') return true
+    }
+    return false
+  }, [eventLog])
 
   const approvalColor = useMemo(() => {
     if (overallApproval >= 60) return 'text-emerald-400'
