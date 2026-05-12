@@ -5,7 +5,7 @@ import { useGameStore } from '@/store/gameStore'
 import { useState } from 'react'
 
 export default function SetupModal() {
-  const { isSetupModalOpen, setupCountry } = useGameStore()
+  const { isSetupModalOpen, setupCountry, closeSetupModal, resetGame, turn, countryName, leaderTitle, leaderName, year } = useGameStore()
   const [formData, setFormData] = useState({
     countryName: 'Varantia',
     leaderTitle: 'Prime Minister',
@@ -41,9 +41,40 @@ export default function SetupModal() {
             >
               <div className="bg-gradient-to-r from-indigo-950/80 to-slate-900 px-8 py-6 border-b border-white/10">
                 <h1 className="text-display font-black text-2xl text-white">Pocket Parliament</h1>
-                <p className="text-indigo-300 text-sm mt-1 font-medium">Initialize your nation's identity</p>
+                <p className="text-indigo-300 text-sm mt-1 font-medium">
+                  {turn > 1 ? 'Resume your administration' : "Initialize your nation's identity"}
+                </p>
               </div>
 
+              {turn > 1 ? (
+                <div className="p-8 space-y-6">
+                  <div className="bg-slate-900/50 border border-white/10 rounded-xl p-6 text-center">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Current Administration</p>
+                    <h2 className="text-2xl font-black text-white">{countryName}</h2>
+                    <p className="text-indigo-400 mt-1">{leaderTitle} {leaderName} — Year {year} (Turn {turn})</p>
+                  </div>
+
+                  <div className="space-y-4 pt-2">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={closeSetupModal}
+                      className="w-full btn-chunky btn-primary py-4 text-base shadow-[0_0_20px_rgba(99,102,241,0.3)]"
+                    >
+                      Continue Campaign
+                    </motion.button>
+                    
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={resetGame}
+                      className="w-full bg-slate-900 border border-red-500/30 text-red-400 font-bold py-3 rounded-xl hover:bg-red-950/40 transition-colors"
+                    >
+                      Start New Game
+                    </motion.button>
+                  </div>
+                </div>
+              ) : (
               <form onSubmit={handleSubmit} className="p-8 space-y-6">
                 <div className="space-y-4">
                   <div>
@@ -118,6 +149,7 @@ export default function SetupModal() {
                   </p>
                 </div>
               </form>
+              )}
             </motion.div>
           </motion.div>
         </>

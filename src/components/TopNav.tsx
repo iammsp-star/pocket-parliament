@@ -14,8 +14,9 @@ import {
   AlertTriangle,
   ChevronRight,
   AlertCircle,
+  Settings,
 } from 'lucide-react'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 
 const getPCColor = (pc: number) => {
   if (pc >= 60) return { text: 'text-emerald-400', bg: 'bg-emerald-500', glow: 'shadow-emerald-500/30' }
@@ -45,7 +46,10 @@ export default function TopNav() {
     advanceTurn,
     openBrief,
     geopolitics,
+    resetGame,
   } = useGameStore()
+
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
   const pcColors = getPCColor(politicalCapital)
   const pcPercent = (politicalCapital / maxPoliticalCapital) * 100
@@ -231,6 +235,39 @@ export default function TopNav() {
 
         {/* Right actions */}
         <div className="flex items-center gap-2">
+          {/* Settings Dropdown */}
+          <div className="relative">
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              whileHover={{ scale: 1.05 }}
+              onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+              className="p-2.5 rounded-xl btn-chunky btn-ghost bg-slate-800/50"
+            >
+              <Settings size={16} className="text-slate-400" />
+            </motion.button>
+            <AnimatePresence>
+              {isSettingsOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  className="absolute top-full right-0 mt-2 bg-slate-900 border border-slate-700/50 rounded-xl p-2 shadow-xl shadow-black/50 w-48 z-[100]"
+                >
+                  <button
+                    onClick={() => {
+                      setIsSettingsOpen(false)
+                      resetGame()
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-lg text-sm font-bold text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-2"
+                  >
+                    <AlertTriangle size={14} />
+                    Abandon Campaign
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
           {/* Pending alerts */}
           <motion.button
             whileTap={{ scale: 0.9 }}

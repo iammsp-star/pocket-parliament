@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { subscribeWithSelector } from 'zustand/middleware'
+import { subscribeWithSelector, persist } from 'zustand/middleware'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -205,6 +205,11 @@ export interface GameState {
   fundIntelligence: () => void
   completeTutorial: () => void
   setTutorialStep: (step: number) => void
+  
+  // Hydration and Reset
+  _hasHydrated: boolean
+  setHasHydrated: (state: boolean) => void
+  resetGame: () => void
 }
 
 // ─── Starting State (Underdog Nation) ────────────────────────────────────────
@@ -305,136 +310,145 @@ const INITIAL_RIVALS: AIRival[] = [
 const computeOverallApproval = (fa: FactionApproval): number =>
   Math.round((fa.wealthy * 0.2 + fa.working * 0.35 + fa.nationalist * 0.25 + fa.youth * 0.2))
 
+const INITIAL_STATE = {
+  // National Identity
+  countryName: 'Varantia',
+  leaderTitle: 'Prime Minister',
+  leaderName: 'You',
+  primaryColor: '#6366f1',
+  secondaryColor: '#f59e0b',
+  flagEmoji: '🏛️',
+
+  // Turn
+  turn: 1,
+  gamePhase: 'playing' as GameState['gamePhase'],
+  year: 2024,
+
+  // Tension & Fog of War
+  turnsUntilElection: 20,
+  consecutiveLowApproval: 0,
+  intelActive: 0,
+  activeDebuffs: [] as string[],
+
+  // Political Capital
+  politicalCapital: 42,
+  maxPoliticalCapital: 100,
+  isLameDuck: false,
+  executiveOrdersUsed: 0,
+
+  // Budget — Underdog starting state
+  budget: {
+    totalGDP: 380000,          // $380B GDP (small developing nation)
+    revenue: 78000,            // $78B revenue
+    expenditure: 95000,        // $95B spending — running a deficit
+    deficit: -17000,           // $17B deficit
+    debtToGDP: 87,             // 87% debt-to-GDP (crisis level)
+    foreignReserves: 12000,    // $12B reserves (thin)
+    incomeTaxRate: 22,
+    corporateTaxRate: 18,
+    tariffRate: 8,
+  },
+
+  // Labor Demographics — Primary-heavy (developing)
+  laborDemographics: {
+    primary: 45,      // 45% in agriculture/mining
+    secondary: 28,    // 28% manufacturing
+    tertiary: 21,     // 21% services/AI
+    unemployed: 6,    // 6% unemployed
+  },
+
+  // Economic Metrics
+  economicMetrics: {
+    gdpGrowthRate: 1.2,
+    inflationRate: 6.8,        // elevated inflation
+    unemployment: 6.0,
+    tradeBalance: -24000,      // trade deficit
+    softPower: 18,             // very low soft power
+    tourism: 12,               // minimal tourism
+    militaryStrength: 31,      // weak military
+    technologicalAdvancement: 14, // very low tech
+  },
+
+  // Social Metrics
+  socialMetrics: {
+    education: 38,
+    healthcare: 42,
+    crime: 61,               // high crime (linked to low education)
+    corruption: 54,          // significant corruption
+    infrastructure: 29,      // poor infrastructure
+    environmentQuality: 45,
+  },
+
+  // Faction Approval
+  factionApproval: {
+    wealthy: 55,
+    working: 31,
+    nationalist: 47,
+    youth: 28,
+  },
+  overallApproval: 39,
+
+  // Modern Age Systems
+  ministries: {
+    defense: { allocatedBudget: 15, ministerEfficiency: 1.0 },
+    health: { allocatedBudget: 25, ministerEfficiency: 1.0 },
+    education: { allocatedBudget: 25, ministerEfficiency: 1.0 },
+    foreignAffairs: { allocatedBudget: 10, ministerEfficiency: 1.0 },
+  },
+  geopolitics: {
+    borderTension: 40,
+    militaryPower: 31,
+    defconLevel: 5,
+  },
+  activeLaws: [] as string[],
+
+  // Events & Briefs
+  currentBrief: null as GameBrief | null,
+  pendingBriefs: STARTING_BRIEFS,
+  eventLog: [
+    { id: 'e-1', message: 'You have assumed office. The nation is watching.', severity: 'info' as AlertSeverity, turn: 1, timestamp: Date.now() },
+    { id: 'e-2', message: 'Debt-to-GDP ratio at 87% — creditors are anxious.', severity: 'critical' as AlertSeverity, turn: 1, timestamp: Date.now() + 1 },
+    { id: 'e-3', message: 'High crime rate linked to education deficit. Intervention needed.', severity: 'warning' as AlertSeverity, turn: 1, timestamp: Date.now() + 2 },
+  ],
+  isBriefModalOpen: false,
+  isSetupModalOpen: true,
+
+  // Rivals
+  rivals: INITIAL_RIVALS,
+  globalRank: 6,
+
+  // UI
+  isSidebarOpen: true,
+  activeTab: 'labor' as GameState['activeTab'],
+  isTutorialActive: false, // Will be hydrated by client component or useEffect
+  tutorialStep: 0,
+
+  // History
+  gdpHistory: [
+    { turn: -5, gdp: 310000, year: 2019 },
+    { turn: -4, gdp: 325000, year: 2020 },
+    { turn: -3, gdp: 318000, year: 2021 },
+    { turn: -2, gdp: 342000, year: 2022 },
+    { turn: -1, gdp: 361000, year: 2023 },
+    { turn: 1, gdp: 380000, year: 2024 },
+  ],
+  approvalHistory: [
+    { turn: 1, overall: 39, wealthy: 55, working: 31, nationalist: 47, youth: 28 },
+  ],
+  _hasHydrated: false,
+}
+
 // ─── Store ────────────────────────────────────────────────────────────────────
 
 export const useGameStore = create<GameState>()(
-  subscribeWithSelector((set, get) => ({
-    // National Identity
-    countryName: 'Varantia',
-    leaderTitle: 'Prime Minister',
-    leaderName: 'You',
-    primaryColor: '#6366f1',
-    secondaryColor: '#f59e0b',
-    flagEmoji: '🏛️',
+  persist(
+    subscribeWithSelector((set, get) => ({
+      ...INITIAL_STATE,
+      
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
+      resetGame: () => set({ ...INITIAL_STATE, _hasHydrated: true, isSetupModalOpen: true }),
 
-    // Turn
-    turn: 1,
-    gamePhase: 'playing',
-    year: 2024,
-
-    // Tension & Fog of War
-    turnsUntilElection: 20,
-    consecutiveLowApproval: 0,
-    intelActive: 0,
-    activeDebuffs: [],
-
-    // Political Capital
-    politicalCapital: 42,
-    maxPoliticalCapital: 100,
-    isLameDuck: false,
-    executiveOrdersUsed: 0,
-
-    // Budget — Underdog starting state
-    budget: {
-      totalGDP: 380000,          // $380B GDP (small developing nation)
-      revenue: 78000,            // $78B revenue
-      expenditure: 95000,        // $95B spending — running a deficit
-      deficit: -17000,           // $17B deficit
-      debtToGDP: 87,             // 87% debt-to-GDP (crisis level)
-      foreignReserves: 12000,    // $12B reserves (thin)
-      incomeTaxRate: 22,
-      corporateTaxRate: 18,
-      tariffRate: 8,
-    },
-
-    // Labor Demographics — Primary-heavy (developing)
-    laborDemographics: {
-      primary: 45,      // 45% in agriculture/mining
-      secondary: 28,    // 28% manufacturing
-      tertiary: 21,     // 21% services/AI
-      unemployed: 6,    // 6% unemployed
-    },
-
-    // Economic Metrics
-    economicMetrics: {
-      gdpGrowthRate: 1.2,
-      inflationRate: 6.8,        // elevated inflation
-      unemployment: 6.0,
-      tradeBalance: -24000,      // trade deficit
-      softPower: 18,             // very low soft power
-      tourism: 12,               // minimal tourism
-      militaryStrength: 31,      // weak military
-      technologicalAdvancement: 14, // very low tech
-    },
-
-    // Social Metrics
-    socialMetrics: {
-      education: 38,
-      healthcare: 42,
-      crime: 61,               // high crime (linked to low education)
-      corruption: 54,          // significant corruption
-      infrastructure: 29,      // poor infrastructure
-      environmentQuality: 45,
-    },
-
-    // Faction Approval
-    factionApproval: {
-      wealthy: 55,
-      working: 31,
-      nationalist: 47,
-      youth: 28,
-    },
-    overallApproval: 39,
-
-    // Modern Age Systems
-    ministries: {
-      defense: { allocatedBudget: 15, ministerEfficiency: 1.0 },
-      health: { allocatedBudget: 25, ministerEfficiency: 1.0 },
-      education: { allocatedBudget: 25, ministerEfficiency: 1.0 },
-      foreignAffairs: { allocatedBudget: 10, ministerEfficiency: 1.0 },
-    },
-    geopolitics: {
-      borderTension: 40,
-      militaryPower: 31,
-      defconLevel: 5,
-    },
-    activeLaws: [],
-
-    // Events & Briefs
-    currentBrief: null,
-    pendingBriefs: STARTING_BRIEFS,
-    eventLog: [
-      { id: 'e-1', message: 'You have assumed office. The nation is watching.', severity: 'info', turn: 1, timestamp: Date.now() },
-      { id: 'e-2', message: 'Debt-to-GDP ratio at 87% — creditors are anxious.', severity: 'critical', turn: 1, timestamp: Date.now() + 1 },
-      { id: 'e-3', message: 'High crime rate linked to education deficit. Intervention needed.', severity: 'warning', turn: 1, timestamp: Date.now() + 2 },
-    ],
-    isBriefModalOpen: false,
-    isSetupModalOpen: true,
-
-    // Rivals
-    rivals: INITIAL_RIVALS,
-    globalRank: 6,
-
-    // UI
-    isSidebarOpen: true,
-    activeTab: 'labor',
-    isTutorialActive: false, // Will be hydrated by client component or useEffect
-    tutorialStep: 0,
-
-    // History
-    gdpHistory: [
-      { turn: -5, gdp: 310000, year: 2019 },
-      { turn: -4, gdp: 325000, year: 2020 },
-      { turn: -3, gdp: 318000, year: 2021 },
-      { turn: -2, gdp: 342000, year: 2022 },
-      { turn: -1, gdp: 361000, year: 2023 },
-      { turn: 1, gdp: 380000, year: 2024 },
-    ],
-    approvalHistory: [
-      { turn: 1, overall: 39, wealthy: 55, working: 31, nationalist: 47, youth: 28 },
-    ],
-
-    // ─── Actions ────────────────────────────────────────────────────────
+      // ─── Actions ────────────────────────────────────────────────────────
 
     setupCountry: (config) => set({
       countryName: config.countryName,
@@ -738,6 +752,19 @@ export const useGameStore = create<GameState>()(
         }
       }
     }),
-  }))
+    })),
+    {
+      name: 'pocket-parliament-save',
+      partialize: (state) => Object.fromEntries(
+        Object.entries(state).filter(([key]) => !['isSetupModalOpen', '_hasHydrated'].includes(key))
+      ),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.setHasHydrated(true)
+          state.openSetupModal()
+        }
+      },
+    }
+  )
 )
 

@@ -9,6 +9,7 @@ import TutorialOverlay from '@/components/TutorialOverlay'
 import { useGameStore } from '@/store/gameStore'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AlertCircle, Info, AlertTriangle } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 // ─── Toast / Event Log Overlay ──────────────────────────────────────────────
 
@@ -97,7 +98,21 @@ function ActionFooter() {
 // ─── Main Game Layout ────────────────────────────────────────────────────────
 
 export default function GameBoard() {
-  const { gamePhase, isTutorialActive, tutorialStep } = useGameStore()
+  const { gamePhase, isTutorialActive, tutorialStep, _hasHydrated } = useGameStore()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted || !_hasHydrated) {
+    return (
+      <div className="h-screen w-screen bg-slate-950 flex flex-col items-center justify-center">
+        <div className="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mb-4" />
+        <p className="text-indigo-400 font-bold uppercase tracking-widest text-sm">Loading Save...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="h-screen w-screen flex relative overflow-hidden bg-slate-950">
