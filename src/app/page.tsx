@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import TopNav from '@/components/TopNav'
 import Sidebar from '@/components/Sidebar'
 import IsometricMap from '@/components/IsometricMap'
@@ -70,7 +71,13 @@ function EventToasts() {
 
 function ActionFooter() {
   const { pendingBriefs, turn, openBrief } = useGameStore()
-  const pendingCount = pendingBriefs.filter(b => b.turn <= turn).length
+
+  // Performance Optimization: Replaced `.filter().length` with `.reduce()` inside `useMemo`
+  // Avoids allocating an intermediate array on every render, especially when pendingBriefs is large.
+  // The `useMemo` ensures we only recalculate when `pendingBriefs` or `turn` changes.
+  const pendingCount = useMemo(() => {
+    return pendingBriefs.reduce((count, b) => b.turn <= turn ? count + 1 : count, 0)
+  }, [pendingBriefs, turn])
 
   if (pendingCount === 0) return null
 
